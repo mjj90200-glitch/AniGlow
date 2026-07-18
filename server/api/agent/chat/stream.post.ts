@@ -8,10 +8,17 @@ export default defineEventHandler(async (event) => {
   const target = `${backendUrl}/api/agent/chat/stream`
 
   const body = await readBody(event)
+  const authorization = getHeader(event, 'authorization')
+    || (getCookie(event, 'aniglow_backend_token')
+      ? `Bearer ${getCookie(event, 'aniglow_backend_token')}`
+      : undefined)
 
   const response = await fetch(target, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authorization ? { Authorization: authorization } : {}),
+    },
     body: JSON.stringify(body),
   })
 

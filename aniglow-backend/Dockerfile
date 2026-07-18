@@ -14,8 +14,8 @@ RUN mvn dependency:go-offline -B -q
 # 复制源码
 COPY src ./src
 
-# 构建 JAR（跳过测试）
-RUN mvn clean package -DskipTests -B -q
+# 镜像构建同样执行测试，避免绕过 CI 门禁
+RUN mvn clean verify -B -q
 
 # ─── Stage 2: 运行阶段 ───────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine AS runner

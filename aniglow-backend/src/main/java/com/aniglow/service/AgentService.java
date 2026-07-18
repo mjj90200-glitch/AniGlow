@@ -161,7 +161,8 @@ public class AgentService {
                 .toList();
     }
 
-    public AgentChatResponse chat(AgentChatRequest req) {
+    public AgentChatResponse chat(AgentChatRequest req, Long authenticatedUserId) {
+        String uid = authenticatedUserId(authenticatedUserId);
         String role = req.getRole();
         AgentCharacter character;
         try {
@@ -177,7 +178,6 @@ public class AgentService {
                     .reply("（" + roleName + "正看着你...）").emotion("normal").build();
         }
         try {
-            String uid = resolveUserId(req);
             List<Map<String, String>> hist = getHistory(uid, role);
             Optional<String> cachedReply = resolveCommonCachedReply(character, req.getMessage());
             if (cachedReply.isPresent()) {
@@ -204,13 +204,13 @@ public class AgentService {
         }
     }
 
-    public AgentMembershipStatusResponse getMembershipStatus(String uid) {
-        Membership membership = resolveMembership(uid);
+    public AgentMembershipStatusResponse getMembershipStatus(Long authenticatedUserId) {
+        Membership membership = resolveMembership(authenticatedUserId(authenticatedUserId));
         return buildMembershipStatus(membership);
     }
 
-    public AgentQuotaStatusResponse getQuotaStatus(String uid) {
-        QuotaResult quota = peekQuota(normalizeUserId(uid));
+    public AgentQuotaStatusResponse getQuotaStatus(Long authenticatedUserId) {
+        QuotaResult quota = peekQuota(authenticatedUserId(authenticatedUserId));
         return AgentQuotaStatusResponse.builder()
                 .limit(quota.limit())
                 .used(Math.max(quota.limit() - quota.remaining(), 0))
@@ -226,11 +226,8 @@ public class AgentService {
      * 开发期月卡开通入口：当前没有接支付回调，用户扫码后点击"已完成支付"会先写入 30 天会员。
      * 后续接入支付宝回调时，只需要把这个方法移动到支付成功回调里调用。
      */
-    public AgentMembershipStatusResponse activateMonthlyMembership(String uid) {
-        String normalizedUid = normalizeUserId(uid);
-        if ("anonymous".equals(normalizedUid)) {
-            return buildMembershipStatus(new Membership(false, null));
-        }
+    public AgentMembershipStatusResponse activateMonthlyMembership(Long authenticatedUserId) {
+        String normalizedUid = authenticatedUserId(authenticatedUserId);
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(FIREFLY_MONTHLY_DAYS);
 
         try {
@@ -248,7 +245,8 @@ public class AgentService {
     }
 
     /** SSE 流式对话 */
-    public SseEmitter chatStream(AgentChatRequest req) {
+    public SseEmitter chatStream(AgentChatRequest req, Long authenticatedUserId) {
+        String uid = authenticatedUserId(authenticatedUserId);
         String role = req.getRole();
         AgentCharacter character;
         try {
@@ -281,7 +279,6 @@ public class AgentService {
 
         streamExecutor.execute(() -> {
             try {
-                String uid = resolveUserId(req);
                 List<Map<String, String>> hist = getHistory(uid, role);
                 StringBuilder fullReply = new StringBuilder();
                 StringBuilder emotionBuffer = new StringBuilder();
@@ -453,8 +450,11 @@ public class AgentService {
         } catch (Exception e) { log.warn("存历史失败: {}", e.getMessage()); }
     }
 
-    private String resolveUserId(AgentChatRequest req) {
-        return (req.getUserId() != null && !req.getUserId().isEmpty()) ? req.getUserId() : "anonymous";
+    private String authenticatedUserId(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("用户身份不能为空");
+        }
+        return userId.toString();
     }
 
     // ================================================================

@@ -4,9 +4,9 @@ import com.aniglow.dto.ApiResponse;
 import com.aniglow.dto.agent.AgentChatRequest;
 import com.aniglow.dto.agent.AgentChatResponse;
 import com.aniglow.dto.agent.AgentCharacterDto;
-import com.aniglow.dto.agent.AgentMembershipRequest;
 import com.aniglow.dto.agent.AgentMembershipStatusResponse;
 import com.aniglow.dto.agent.AgentQuotaStatusResponse;
+import com.aniglow.security.UserDetailsImpl;
 import com.aniglow.service.AgentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -51,39 +53,44 @@ public class AgentController {
     @PostMapping("/chat")
     @Operation(summary = "与角色对话（阻塞式）")
     public ResponseEntity<ApiResponse<AgentChatResponse>> chat(
-            @Valid @RequestBody AgentChatRequest request
+            @Valid @RequestBody AgentChatRequest request,
+            @AuthenticationPrincipal UserDetailsImpl user
     ) {
-        AgentChatResponse response = agentService.chat(request);
+        AgentChatResponse response = agentService.chat(request, user.getId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/chat/stream")
     @Operation(summary = "与角色对话（SSE 流式）", description = "返回 text/event-stream，逐 token 推送 AI 回复")
-    public SseEmitter chatStream(@Valid @RequestBody AgentChatRequest request) {
-        return agentService.chatStream(request);
+    public SseEmitter chatStream(
+            @Valid @RequestBody AgentChatRequest request,
+            @AuthenticationPrincipal UserDetailsImpl user
+    ) {
+        return agentService.chatStream(request, user.getId());
     }
 
     @GetMapping("/membership/status")
     @Operation(summary = "获取萤火会员状态", description = "返回当前用户 AIGC 对话额度、月卡状态和支付二维码地址")
     public ResponseEntity<ApiResponse<AgentMembershipStatusResponse>> getMembershipStatus(
-            @RequestParam(defaultValue = "anonymous") String userId
+            @AuthenticationPrincipal UserDetailsImpl user
     ) {
-        return ResponseEntity.ok(ApiResponse.success(agentService.getMembershipStatus(userId)));
+        return ResponseEntity.ok(ApiResponse.success(agentService.getMembershipStatus(user.getId())));
     }
 
     @GetMapping("/quota")
     @Operation(summary = "获取 AIGC 对话配额", description = "返回当前小时已用、剩余次数和下次整点重置时间")
     public ResponseEntity<ApiResponse<AgentQuotaStatusResponse>> getQuotaStatus(
-            @RequestParam(defaultValue = "anonymous") String userId
+            @AuthenticationPrincipal UserDetailsImpl user
     ) {
-        return ResponseEntity.ok(ApiResponse.success(agentService.getQuotaStatus(userId)));
+        return ResponseEntity.ok(ApiResponse.success(agentService.getQuotaStatus(user.getId())));
     }
 
     @PostMapping("/membership/activate-monthly")
-    @Operation(summary = "开通萤火月卡（开发期）", description = "当前用于支付二维码流程占位，后续应迁移到支付宝支付成功回调")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "管理端开通萤火月卡（开发期）", description = "仅供管理端占位；正式支付接入后迁移到支付宝服务端回调")
     public ResponseEntity<ApiResponse<AgentMembershipStatusResponse>> activateMonthly(
-            @Valid @RequestBody AgentMembershipRequest request
+            @AuthenticationPrincipal UserDetailsImpl user
     ) {
-        return ResponseEntity.ok(ApiResponse.success("萤火月卡已开通", agentService.activateMonthlyMembership(request.getUserId())));
+        return ResponseEntity.ok(ApiResponse.success("萤火月卡已开通", agentService.activateMonthlyMembership(user.getId())));
     }
 }

@@ -16,7 +16,4 @@ public class AgentChatRequest {
 
     @Builder.Default
     private String role = "Makima";
-
-    /** 用户标识（用于对话历史隔离），可选 */
-    private String userId;
 }

@@ -33,6 +33,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final UserDetailsService userDetailsService;
 
@@ -54,7 +55,8 @@ public class SecurityConfig {
                     .requestMatchers("/ranking/**").permitAll()
                     .requestMatchers("/ratings/anime/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/ratings/*/replies").permitAll()
-                    .requestMatchers("/agent/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/agent/roles", "/agent/characters", "/agent/characters/anime/*").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/agent/vote/candidates").permitAll()
                     .requestMatchers("/stats/**").permitAll()
                     .requestMatchers("/images/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/communities/**").permitAll()
@@ -66,13 +68,15 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/communities/**").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/communities/**").authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/communities/**").authenticated()
+                    .requestMatchers("/agent/**").authenticated()
                     .requestMatchers("/user/**").authenticated()
                     // 管理员权限
                     .requestMatchers("/admin/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -99,8 +103,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000", "http://localhost:3001", "http://localhost:8081",
-                "https://www.mjj520.com", "http://www.mjj520.com"
+                "http://127.0.0.1:3001", "http://localhost:3000", "http://localhost:3001", "http://localhost:8081",
+                "https://www.mjj520.top", "http://www.mjj520.top"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

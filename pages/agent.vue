@@ -444,6 +444,7 @@ let openingAudio: HTMLAudioElement | null = null
 
 const route = useRoute()
 const userStore = useUserStore()
+const { open: openAuthModal } = useAuthModal()
 
 // ═══ 移动端聊天数据 ═══
 
@@ -752,9 +753,10 @@ function updateLastAgentMessage(text: string, emotion?: string) {
 }
 
 async function refreshMembershipStatus() {
+  if (!await userStore.ensureBackendToken()) return
   try {
     const res = await $fetch<{ data?: MembershipStatus }>(`${apiBase}/agent/membership/status`, {
-      params: { userId: currentAgentUserId.value },
+      headers: { Authorization: `Bearer ${userStore.backendToken}` },
     })
     membershipStatus.value = res?.data ?? null
   } catch {
@@ -766,9 +768,10 @@ async function refreshMembershipStatus() {
 }
 
 async function refreshQuotaStatus() {
+  if (!await userStore.ensureBackendToken()) return
   try {
     const res = await $fetch<{ data?: QuotaStatus }>(`${apiBase}/agent/quota`, {
-      params: { userId: currentAgentUserId.value },
+      headers: { Authorization: `Bearer ${userStore.backendToken}` },
     })
     if (res?.data) quotaStatus.value = res.data
   } catch {
@@ -785,6 +788,11 @@ async function sendMessage() {
   const text = inputText.value.trim()
   if (!text || !selectedRole.value || sending.value) return
 
+  if (!await userStore.ensureBackendToken()) {
+    openAuthModal()
+    return
+  }
+
   // 推送用户消息到聊天记录
   pushHistory('user', text)
   inputText.value = ''
@@ -795,14 +803,16 @@ async function sendMessage() {
   pushHistory('agent', '')
   autoScrollToBottom()
 
-  const userId = currentAgentUserId.value
   const role = selectedRole.value
 
   try {
     const response = await fetch(`${apiBase}/agent/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, role, userId }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${userStore.backendToken}`,
+      },
+      body: JSON.stringify({ message: text, role }),
     })
 
     if (!response.ok || !response.body) throw new Error('SSE 连接失败')
@@ -847,7 +857,8 @@ async function sendMessage() {
     if (!replyText.trim()) {
       const res = await $fetch<{ data?: { reply?: string; emotion?: string; rateLimited?: boolean; quotaLimit?: number } }>(`${apiBase}/agent/chat`, {
         method: 'POST',
-        body: { message: text, role, userId },
+        headers: { Authorization: `Bearer ${userStore.backendToken}` },
+        body: { message: text, role },
       })
       const data = res?.data
       replyText = data?.reply || `（${roleNames.value[role] || role} 轻轻沉默了片刻...）`

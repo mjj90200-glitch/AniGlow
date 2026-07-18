@@ -288,16 +288,16 @@ class AgentServiceQuotaAndSseTest {
             String currentApiKey = (String) ReflectionTestUtils.getField(agentService, "apiKey");
             assertThat(currentApiKey).isNullOrEmpty();
 
-            var req = createRequest("test-user", "Rem", "你好");
-            var emitter = agentService.chatStream(req);
+            var req = createRequest("Rem", "你好");
+            var emitter = agentService.chatStream(req, 1L);
             assertThat(emitter).isNotNull();
         }
 
         @Test
         @DisplayName("SseEmitter 超时设为 120 秒")
         void sseEmitterTimeoutIs120Seconds() {
-            var req = createRequest("test-user", "Rem", "你好");
-            var emitter = agentService.chatStream(req);
+            var req = createRequest("Rem", "你好");
+            var emitter = agentService.chatStream(req, 1L);
             assertThat(emitter.getTimeout()).isEqualTo(120_000L);
         }
 
@@ -313,10 +313,8 @@ class AgentServiceQuotaAndSseTest {
             assertThat(event).contains("resetAt=");
         }
 
-        private com.aniglow.dto.agent.AgentChatRequest createRequest(
-                String userId, String role, String message) {
+        private com.aniglow.dto.agent.AgentChatRequest createRequest(String role, String message) {
             var req = new com.aniglow.dto.agent.AgentChatRequest();
-            req.setUserId(userId);
             req.setRole(role);
             req.setMessage(message);
             return req;
