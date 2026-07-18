@@ -35,6 +35,7 @@ public class RatingReply {
     private String content;
 
     @Column(name = "like_count")
+    @Builder.Default
     private Long likeCount = 0L;
 
     @CreationTimestamp

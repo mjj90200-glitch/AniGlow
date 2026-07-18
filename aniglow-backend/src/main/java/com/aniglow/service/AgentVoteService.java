@@ -80,6 +80,9 @@ public class AgentVoteService {
 
         AgentVoteCandidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new IllegalArgumentException("候选角色不存在"));
+        if (!weekKey.equals(candidate.getWeekKey())) {
+            throw new IllegalArgumentException("候选角色不属于本周投票");
+        }
 
         AgentVote vote = AgentVote.builder()
                 .user(User.builder().id(userId).build())
@@ -88,7 +91,7 @@ public class AgentVoteService {
                 .build();
         agentVoteRepository.save(vote);
 
-        candidate.setVoteCount(candidate.getVoteCount() + 1);
+        candidate.setVoteCount((candidate.getVoteCount() == null ? 0L : candidate.getVoteCount()) + 1);
         candidateRepository.save(candidate);
 
         return buildStatus(userId, weekKey);
@@ -134,19 +137,21 @@ public class AgentVoteService {
                 .max()
                 .orElse(0);
 
-        AgentCharacter character = AgentCharacter.builder()
-                .code(winner.getCode())
-                .displayName(winner.getDisplayName())
-                .sourceTitle(winner.getSourceTitle())
-                .avatarUrl(winner.getAvatarUrl())
-                .personality(winner.getPersonality())
-                .speechStyle(winner.getSpeechStyle())
-                .catchphrases(winner.getCatchphrases())
-                .extraPrompt(winner.getExtraPrompt())
-                .enabled(true)
-                .sortOrder(maxSortOrder + 1)
-                .build();
-        agentCharacterRepository.save(character);
+        if (!agentCharacterRepository.existsByCode(winner.getCode())) {
+            AgentCharacter character = AgentCharacter.builder()
+                    .code(winner.getCode())
+                    .displayName(winner.getDisplayName())
+                    .sourceTitle(winner.getSourceTitle())
+                    .avatarUrl(winner.getAvatarUrl())
+                    .personality(winner.getPersonality())
+                    .speechStyle(winner.getSpeechStyle())
+                    .catchphrases(winner.getCatchphrases())
+                    .extraPrompt(winner.getExtraPrompt())
+                    .enabled(true)
+                    .sortOrder(maxSortOrder + 1)
+                    .build();
+            agentCharacterRepository.save(character);
+        }
 
         winner.setIsWinner(true);
         candidateRepository.save(winner);

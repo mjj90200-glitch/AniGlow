@@ -25,216 +25,18 @@
     </div>
 
     <template v-else>
-      <section class="relative overflow-hidden pt-28 pb-10">
-        <div class="absolute inset-x-0 top-0 h-[520px] overflow-hidden">
-          <img
-            :src="anime.coverImage"
-            :alt="displayTitle(anime)"
-            class="w-full h-full object-cover blur-sm scale-105 opacity-60"
-          />
-          <div class="absolute inset-0 bg-gradient-to-b from-cream/35 via-cream/80 to-cream" />
-        </div>
-
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <NuxtLink
-            to="/anime"
-            class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/70 backdrop-blur-md
-                   text-sm font-bold text-gray-600 shadow-soft hover:text-firefly-700 transition-colors"
-          >
-            <ArrowLeft class="w-4 h-4" />
-            返回番剧
-          </NuxtLink>
-
-          <div class="grid lg:grid-cols-[280px,1fr] gap-8 lg:gap-10 items-end">
-            <div class="glass-card rounded-[2rem] p-3">
-              <img
-                :src="anime.coverImage"
-                :alt="displayTitle(anime)"
-                class="w-full aspect-[3/4] object-cover rounded-[1.45rem] shadow-ambient"
-              />
-            </div>
-
-            <div class="glass-card-cream rounded-4xl p-7 sm:p-9">
-              <div class="flex flex-wrap items-center gap-2 mb-4">
-                <span
-                  v-for="tag in mappedGenres"
-                  :key="tag.label"
-                  class="tag"
-                  :class="tagClass(tag.type)"
-                >
-                  {{ tag.label }}
-                </span>
-                <span v-if="anime.year" class="tag tag-new">{{ anime.year }}</span>
-                <span v-if="anime.status" class="tag tag-healing">{{ tStatus(anime.status) }}</span>
-              </div>
-
-              <h1 class="text-3xl sm:text-5xl font-extrabold text-gray-800 leading-tight mb-3">
-                {{ displayTitle(anime) }}
-              </h1>
-              <p v-if="anime.titleEnglish" class="text-sm text-gray-400 font-semibold mb-5">
-                {{ anime.titleEnglish }}
-              </p>
-              <p class="text-gray-600 leading-relaxed max-w-3xl line-clamp-3 mb-6">
-                {{ synopsis }}
-              </p>
-
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="rounded-3xl bg-white/60 backdrop-blur-md px-4 py-3">
-                  <p class="text-xs text-gray-400">用户评分</p>
-                  <p class="text-2xl font-extrabold text-gray-800">
-                    {{ scoreText }}<span class="text-sm text-gray-400"> / 10</span>
-                  </p>
-                </div>
-                <div class="rounded-3xl bg-white/60 backdrop-blur-md px-4 py-3">
-                  <p class="text-xs text-gray-400">站内共鸣</p>
-                  <p class="text-2xl font-extrabold text-gray-800">{{ anime.communityRatingCount || 0 }}</p>
-                </div>
-                <div class="rounded-3xl bg-white/60 backdrop-blur-md px-4 py-3">
-                  <p class="text-xs text-gray-400">集数</p>
-                  <p class="text-2xl font-extrabold text-gray-800">{{ anime.episodes || '?' }}</p>
-                </div>
-                <div class="rounded-3xl bg-white/60 backdrop-blur-md px-4 py-3">
-                  <p class="text-xs text-gray-400">类型</p>
-                  <p class="text-lg font-extrabold text-gray-800">{{ tType(anime.type) || '未知' }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AnimeHero :anime="anime" :mapped-genres="mappedGenres" :synopsis="synopsis" :score-text="scoreText" />
 
       <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid lg:grid-cols-[1fr,340px] gap-6 lg:gap-8">
           <div class="space-y-6">
-            <div class="glass-card rounded-4xl p-6 sm:p-8">
-              <div class="flex items-center justify-between gap-4 mb-5">
-                <div>
-                  <p class="text-xs font-semibold tracking-widest uppercase mb-1" style="color: #00AA44;">
-                    Story & Tags
-                  </p>
-                  <h2 class="text-2xl font-extrabold text-gray-800">作品介绍</h2>
-                </div>
-                <BookOpen class="w-7 h-7 text-firefly" />
-              </div>
-              <p class="text-gray-600 leading-8">{{ synopsis }}</p>
-            </div>
-
-            <div
-              v-if="aigcCharacters.length"
-              class="glass-card rounded-4xl p-6 sm:p-8 overflow-hidden relative"
-            >
-              <div
-                class="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-firefly/10 blur-3xl pointer-events-none"
-              />
-              <div class="relative flex items-center justify-between gap-4 mb-5">
-                <div>
-                  <p class="text-xs font-semibold tracking-widest uppercase mb-1" style="color: #00AA44;">
-                    AIGC Cast
-                  </p>
-                  <h2 class="text-2xl font-extrabold text-gray-800">本作 AIGC 角色</h2>
-                  <p class="mt-1 text-sm text-gray-500">
-                    像参演角色一样，把能对话的角色收在这里，方便你看完简介直接去聊。
-                  </p>
-                </div>
-                <Sparkles class="w-7 h-7 text-firefly" />
-              </div>
-
-              <div class="relative grid sm:grid-cols-2 gap-3">
-                <NuxtLink
-                  v-for="character in aigcCharacters"
-                  :key="character.code"
-                  :to="{ path: '/agent', query: { role: character.code } }"
-                  class="group rounded-3xl border border-white/60 bg-white/58 p-4 backdrop-blur-md
-                         transition-all duration-300 hover:-translate-y-1 hover:bg-white/78 hover:shadow-glow-sm"
-                >
-                  <div class="flex items-center gap-3">
-                    <div class="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-firefly/10 ring-2 ring-white/70">
-                      <img
-                        v-if="character.avatarUrl"
-                        :src="character.avatarUrl"
-                        :alt="character.displayName"
-                        class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      <div v-else class="flex h-full w-full items-center justify-center">
-                        <Bot class="h-6 w-6 text-firefly-600" />
-                      </div>
-                      <span class="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full bg-firefly ring-2 ring-white" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <h3 class="truncate text-base font-extrabold text-gray-800 group-hover:text-firefly-700">
-                          {{ character.displayName }}
-                        </h3>
-                        <span class="rounded-full bg-firefly/10 px-2 py-0.5 text-[10px] font-black text-firefly-700">
-                          AIGC
-                        </span>
-                      </div>
-                      <p class="mt-1 truncate text-xs font-semibold text-gray-400">
-                        来自《{{ character.sourceTitle || displayTitle(anime) }}》
-                      </p>
-                      <p class="mt-2 text-xs font-bold text-gray-500">
-                        点击去和 TA 聊聊
-                      </p>
-                    </div>
-                  </div>
-                </NuxtLink>
-              </div>
-            </div>
-
-            <div class="glass-card rounded-4xl p-6 sm:p-8">
-              <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-firefly-600">
-                    Community Stories
-                  </p>
-                  <h2 class="text-2xl font-extrabold text-gray-800">相关社区讨论</h2>
-                  <p class="mt-1 text-sm leading-6 text-gray-500">从作品介绍继续走进同好们正在聊的话题。</p>
-                </div>
-                <NuxtLink
-                  :to="relatedCommunityPath"
-                  class="inline-flex shrink-0 items-center gap-1.5 text-sm font-extrabold text-firefly-700 transition hover:text-firefly-600"
-                >
-                  去社区聊聊
-                  <ArrowRight class="h-4 w-4" />
-                </NuxtLink>
-              </div>
-
-              <div v-if="relatedCommunityPosts.length" class="grid gap-3 sm:grid-cols-2">
-                <NuxtLink
-                  v-for="post in relatedCommunityPosts"
-                  :key="post.id"
-                  :to="`/community/${post.communitySlug}/posts/${post.id}`"
-                  class="group rounded-3xl border border-white/65 bg-white/55 p-4 backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80 hover:shadow-soft"
-                >
-                  <div class="mb-3 flex items-center gap-2">
-                    <div class="h-8 w-8 overflow-hidden rounded-full bg-firefly/10">
-                      <img v-if="post.avatarUrl" :src="post.avatarUrl" :alt="post.displayName || '番舍同好'" class="h-full w-full object-cover" />
-                      <div v-else class="flex h-full w-full items-center justify-center text-xs font-black text-firefly-700">
-                        {{ (post.displayName || '萤')[0] }}
-                      </div>
-                    </div>
-                    <div class="min-w-0">
-                      <p class="truncate text-xs font-extrabold text-gray-700">{{ post.displayName || '番舍同好' }}</p>
-                      <p class="truncate text-[11px] font-semibold text-gray-400">{{ post.communityName }}</p>
-                    </div>
-                  </div>
-                  <h3 class="line-clamp-2 text-sm font-extrabold leading-6 text-gray-800 transition group-hover:text-firefly-700">
-                    {{ post.title }}
-                  </h3>
-                  <p class="mt-2 line-clamp-2 text-xs leading-5 text-gray-500">{{ post.content }}</p>
-                  <div class="mt-3 flex items-center gap-4 text-[11px] font-bold text-gray-400">
-                    <span class="inline-flex items-center gap-1"><MessageCircle class="h-3.5 w-3.5" />{{ post.replyCount }}</span>
-                    <span class="inline-flex items-center gap-1"><Heart class="h-3.5 w-3.5" />{{ post.likeCount }}</span>
-                  </div>
-                </NuxtLink>
-              </div>
-
-              <div v-else class="rounded-3xl border border-dashed border-firefly/20 bg-firefly/5 px-5 py-6 text-center">
-                <Sparkles class="mx-auto h-6 w-6 text-firefly" />
-                <p class="mt-2 text-sm font-extrabold text-gray-700">这部番的第一场社区讨论，正在等你点亮</p>
-                <p class="mt-1 text-xs text-gray-400">可以去番剧社区发帖，把想说的话变成同好的相遇。</p>
-              </div>
-            </div>
+            <AnimeDetailTabs
+              :anime="anime"
+              :synopsis="synopsis"
+              :aigc-characters="aigcCharacters"
+              :related-community-posts="relatedCommunityPosts"
+              :related-community-path="relatedCommunityPath"
+            />
 
             <div ref="commentPanelRef" class="glass-card rounded-4xl p-6 sm:p-8">
               <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-6">
@@ -493,89 +295,16 @@
             </div>
           </div>
 
-          <aside class="space-y-6">
-            <div class="glass-card overflow-hidden rounded-4xl p-6">
-              <div class="flex items-center justify-between gap-4">
-                <div>
-                  <p class="text-[11px] font-black uppercase tracking-[0.2em] text-firefly-600">Firefly Vote</p>
-                  <h3 class="mt-1 text-lg font-extrabold text-gray-800">为这部番投一票</h3>
-                </div>
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-firefly/10 text-firefly-700">
-                  <TicketCheck class="h-5 w-5" />
-                </div>
-              </div>
-
-              <div class="my-5 grid grid-cols-2 gap-3">
-                <div class="rounded-3xl bg-white/60 p-3">
-                  <p class="text-[11px] font-bold text-gray-400">当前萤火票</p>
-                  <p class="mt-1 text-2xl font-black text-gray-800">{{ currentFireflyVotes }}</p>
-                </div>
-                <div class="rounded-3xl bg-white/60 p-3">
-                  <p class="text-[11px] font-bold text-gray-400">我的可用票</p>
-                  <p class="mt-1 text-2xl font-black text-firefly-700">{{ dailyStore.state.tickets }}</p>
-                </div>
-              </div>
-
-              <button
-                v-if="dailyStore.state.tickets > 0"
-                type="button"
-                class="btn-glow w-full justify-center px-5 py-3"
-                :disabled="voting"
-                :class="voting ? 'pointer-events-none opacity-50' : ''"
-                @click="voteForCurrentAnime"
-              >
-                {{ voting ? '萤火飞行中...' : '投出 1 张萤火票' }}
-              </button>
-              <NuxtLink v-else to="/daily" class="btn-glow flex w-full justify-center px-5 py-3">
-                去做每日任务领票
-              </NuxtLink>
-
-              <p v-if="voteMessage" class="mt-3 text-center text-xs font-extrabold text-firefly-700">{{ voteMessage }}</p>
-              <p v-if="voteError" class="mt-3 text-center text-xs font-bold text-sakura-dark">{{ voteError }}</p>
-            </div>
-
-            <div class="glass-card rounded-4xl p-6">
-              <h3 class="text-lg font-extrabold text-gray-800 mb-4">基本信息</h3>
-              <div class="space-y-3 text-sm">
-                <div v-for="item in infoRows" :key="item.label" class="flex justify-between gap-4">
-                  <span class="text-gray-400">{{ item.label }}</span>
-                  <span class="text-gray-700 font-bold text-right">{{ item.value }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="glass-card rounded-4xl p-6">
-              <h3 class="text-lg font-extrabold text-gray-800 mb-4">同好也在看</h3>
-              <div class="space-y-4">
-                <NuxtLink
-                  v-for="item in relatedAnime"
-                  :key="item.id"
-                  :to="`/anime/${item.id}`"
-                  class="flex gap-3 group"
-                >
-                  <div class="w-16 h-20 rounded-2xl overflow-hidden shrink-0 shadow-soft">
-                    <img
-                      :src="item.coverImage"
-                      :alt="displayTitle(item)"
-                      class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <h4 class="text-sm font-extrabold text-gray-800 line-clamp-2 group-hover:text-firefly-700">
-                      {{ displayTitle(item) }}
-                    </h4>
-                    <p class="text-xs text-gray-400 mt-1">{{ tType(item.type) || item.year || '番剧' }}</p>
-                    <div class="flex items-center gap-1 mt-1">
-                      <Star class="w-3.5 h-3.5 text-[#FFD54F] fill-[#FFD54F]" />
-                      <span class="text-xs font-bold text-gray-600">
-                        {{ formatScore(communityScore(item)) }}
-                      </span>
-                    </div>
-                  </div>
-                </NuxtLink>
-              </div>
-            </div>
-          </aside>
+          <AnimeSidebar
+            :current-votes="currentFireflyVotes"
+            :available-tickets="dailyStore.state.tickets"
+            :voting="voting"
+            :vote-message="voteMessage"
+            :vote-error="voteError"
+            :info-rows="infoRows"
+            :related-anime="relatedAnime"
+            @vote="voteForCurrentAnime"
+          />
         </div>
       </section>
     </template>
@@ -605,16 +334,11 @@
 
 <script setup lang="ts">
 import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  Bot,
   Flame,
   Heart,
   MessageCircle,
   Sparkles,
   Star,
-  TicketCheck,
   Trash2,
 } from 'lucide-vue-next'
 import type { AnimeDto } from '~/types/anime'
@@ -682,8 +406,7 @@ const {
 const dailyStore = useDailyStore()
 const userStore = useUserStore()
 const { fetchPostsByAnime } = useCommunity()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase || '/api'
+const { request } = useApi()
 const REVIEW_STORAGE_PREFIX = 'aniglow_reviews_'
 const REVIEW_LIKES_PREFIX = 'aniglow_review_likes_'
 
@@ -704,8 +427,7 @@ const { data: aigcCharactersData } = await useAsyncData(
   async () => {
     if (!animeId.value) return []
     try {
-      const res = await $fetch<{ data?: AigcCharacter[] }>(`${apiBase}/agent/characters/anime/${animeId.value}`)
-      return res?.data ?? []
+      return await request<AigcCharacter[]>(`/agent/characters/anime/${animeId.value}`)
     } catch {
       return []
     }

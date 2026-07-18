@@ -45,6 +45,7 @@ public class User {
     private Role role;
 
     @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

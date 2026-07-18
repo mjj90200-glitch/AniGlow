@@ -61,9 +61,11 @@ public class Rating {
     private Boolean isRecommended;
 
     @Column(name = "contains_spoiler")
+    @Builder.Default
     private Boolean containsSpoiler = false;
 
     @Column(name = "like_count")
+    @Builder.Default
     private Long likeCount = 0L;
 
     @CreationTimestamp

@@ -10,7 +10,7 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
   ],
 
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/pages/agent.css'],
 
   app: {
     head: {

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-# 萤火番舍 AniGlow · 后端 Dockerfile（Spring Boot 3.2 + Java 21）
+# 萤火番舍 AniGlow · 后端 Dockerfile（Spring Boot 3.5 + Java 21）
 # ═══════════════════════════════════════════════════════════════
 
 # ─── Stage 1: Maven 构建阶段 ─────────────────────────────────
@@ -37,6 +37,6 @@ USER aniglow
 EXPOSE 8081
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD pgrep -f "app.jar" || exit 1
+  CMD wget -qO- http://localhost:8081/api/actuator/health | grep -q '"status":"UP"' || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

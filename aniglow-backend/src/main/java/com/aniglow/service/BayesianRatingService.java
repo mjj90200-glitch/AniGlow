@@ -5,6 +5,7 @@ import com.aniglow.repository.AnimeRepository;
 import com.aniglow.repository.RatingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -105,6 +106,7 @@ public class BayesianRatingService {
      * 这样 Jikan/MAL 抓取后的原始排行可以长期保持稳定。
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void updateCommunityRatingStats(Long animeId) {
         List<Object[]> result = ratingRepository.calculateAverageByAnimeId(animeId);
 
@@ -134,6 +136,7 @@ public class BayesianRatingService {
      * 用于定时任务或数据迁移
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void recalculateAllRatings() {
         log.info("开始重新计算所有动漫的站内用户评分...");
 

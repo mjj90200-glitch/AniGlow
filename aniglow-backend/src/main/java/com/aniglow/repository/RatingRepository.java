@@ -3,6 +3,7 @@ package com.aniglow.repository;
 import com.aniglow.entity.Rating;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,7 +20,11 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     boolean existsByUserIdAndAnimeId(Long userId, Long animeId);
 
-    // 获取动漫的所有评分
+    // 数据库分页，避免先加载整部作品的全部评分再在内存截取。
+    @EntityGraph(attributePaths = {"user", "anime"})
+    Page<Rating> findByAnimeIdOrderByCreatedAtDesc(Long animeId, Pageable pageable);
+
+    // 评分统计服务仍需要完整评分集合。
     List<Rating> findByAnimeId(Long animeId);
 
     // 获取用户的所有评分
@@ -39,10 +44,12 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
     List<Object[]> findTopRatedByTimeRange(@Param("startTime") LocalDateTime startTime, Pageable pageable);
 
     // 最近评论
+    @EntityGraph(attributePaths = {"user", "anime"})
     @Query("SELECT r FROM Rating r WHERE r.review IS NOT NULL AND r.review != '' ORDER BY r.createdAt DESC")
     Page<Rating> findRecentReviews(Pageable pageable);
 
     // 某动漫的热门评论
+    @EntityGraph(attributePaths = {"user", "anime"})
     @Query("SELECT r FROM Rating r WHERE r.anime.id = :animeId AND r.review IS NOT NULL " +
            "AND r.review != '' ORDER BY r.likeCount DESC, r.updatedAt DESC, r.createdAt DESC")
     Page<Rating> findPopularReviewsByAnimeId(@Param("animeId") Long animeId, Pageable pageable);

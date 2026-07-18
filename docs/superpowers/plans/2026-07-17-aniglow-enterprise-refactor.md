@@ -6,7 +6,9 @@
 
 **Architecture:** 按"高收益/易修改"→"高风险/必须改"→"长线优化"三级优先级分阶段推进。每项任务给出目标、涉及文件、改法要点、验证方式，不逐行写完整代码。
 
-**Tech Stack:** 前端 Nuxt 3 (Vue 3 + Pinia + Tailwind) / 后端 Spring Boot 3.2.5 + JPA + MySQL + Redis + JWT + Authing + 火山方舟 AI / Docker Compose 部署
+**Tech Stack:** 前端 Nuxt 3 (Vue 3 + Pinia + Tailwind) / 后端 Spring Boot 3.5.16 + JPA + MySQL + Redis + JWT + Authing + 火山方舟 AI / Docker Compose 部署
+
+**Implementation status (2026-07-18):** Phase 2 与 Phase 3 已全部完成并部署验证。具体改动与发布检查见 `docs/refactor/phase-2-3-implementation.md`。
 
 ---
 ---

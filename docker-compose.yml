@@ -86,6 +86,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
     ports:
       - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/api/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     networks:
       - aniglow-net
 
@@ -101,7 +107,8 @@ services:
     container_name: aniglow-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       # Authing（前端公开 + 服务端 SDK）
       NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID}

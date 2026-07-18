@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,6 +38,7 @@ public class FireflyVoteController {
             security = @SecurityRequirement(name = "bearerAuth"))
     @PreAuthorize("isAuthenticated()")
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public ResponseEntity<ApiResponse<FireflyVoteResponse>> vote(
             @Valid @RequestBody FireflyVoteRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

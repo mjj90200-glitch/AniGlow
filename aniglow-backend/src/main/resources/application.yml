@@ -23,14 +23,21 @@ spring:
 
   # JPA 配置
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-        format_sql: true
-        use_sql_comments: true
+        default_batch_fetch_size: 50
+        format_sql: false
+        use_sql_comments: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
 
   # Redis 配置
   data:
@@ -46,6 +53,8 @@ spring:
           min-idle: 0
           max-wait: -1ms
       timeout: 2000ms
+      repositories:
+        enabled: false
 
   servlet:
     multipart:
@@ -54,6 +63,12 @@ spring:
 
 # 文件上传配置
 aniglow:
+  cache:
+    key-prefix: "aniglow::"
+  scheduling:
+    enabled: true
+  search:
+    fulltext-enabled: true
   upload:
     dir: ${user.home}/aniglow-data
     max-file-size: 10485760
@@ -72,6 +87,9 @@ aniglow:
   jikan:
     base-url: https://api.jikan.moe/v4
     sync-interval: 3600000  # 1小时同步一次（毫秒）
+    initial-delay: 300000   # 启动 5 分钟后再执行，避免阻塞 readiness
+    scheduling-enabled: true
+    bootstrap-on-empty: false
     request-delay: 1000     # API 请求间隔（毫秒）
 
   # AI Agent 角色对话配置（火山方舟 Ark API / Coding Plan）
@@ -106,12 +124,34 @@ springdoc:
     tagsSorter: alpha
   show-actuator: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: '@project.version@'
+
 # 日志配置
 logging:
   level:
-    com.aniglow: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.aniglow: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
@@ -122,6 +162,7 @@ spring:
     activate:
       on-profile: prod
   jpa:
+    open-in-view: false
     show-sql: false
     hibernate:
       ddl-auto: validate
@@ -130,4 +171,4 @@ logging:
   level:
     com.aniglow: INFO
     org.springframework.security: INFO
-    org.hibernate.SQL: INFO
+    org.hibernate.SQL: WARN

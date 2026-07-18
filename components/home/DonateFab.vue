@@ -60,17 +60,12 @@ const showPopup = ref(false)
 const qrUrl = ref('/images/douyin-qr.png')
 const title = ref('喜欢角色的陪伴吗？')
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase || '/api'
+const { request } = useApi()
 
 async function fetchMembership() {
   try {
-    const userStore = useUserStore()
-    const uid = userStore.backendUserId || userStore.user?.phone || 'anonymous'
-    const res = await $fetch<{ data?: MembershipStatus }>(`${apiBase}/agent/membership/status?userId=${uid}`)
-    if (res?.data) {
-      qrUrl.value = res.data.paymentQrUrl || '/images/douyin-qr.png'
-    }
+    const membership = await request<MembershipStatus>('/agent/membership/status', { auth: true })
+    qrUrl.value = membership.paymentQrUrl || '/images/douyin-qr.png'
   } catch {}
 }
 

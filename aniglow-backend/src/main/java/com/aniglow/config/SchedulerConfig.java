@@ -1,6 +1,7 @@
 package com.aniglow.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -10,6 +11,7 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 @Configuration
 @EnableScheduling
 @Profile("!test")
+@ConditionalOnProperty(name = "aniglow.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class SchedulerConfig implements SchedulingConfigurer {
 
     @Override

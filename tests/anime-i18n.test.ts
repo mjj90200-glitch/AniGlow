@@ -6,6 +6,9 @@ import {
   displayTitle,
   formatNumber,
   mapGenres,
+  tagClass,
+  tStatus,
+  tType,
 } from '../composables/useAnimeI18n'
 
 describe('anime display helpers', () => {
@@ -28,5 +31,49 @@ describe('anime display helpers', () => {
       { label: '剧情', type: 'healing' },
     ])
     expect(formatNumber(12_400)).toBe('1.2万')
+  })
+
+  it('falls back through Japanese, original and empty titles', () => {
+    expect(displayTitle({ titleJapanese: '葬送のフリーレン', title: 'Frieren' })).toBe('葬送のフリーレン')
+    expect(displayTitle({ title: 'Frieren' })).toBe('Frieren')
+    expect(displayTitle({})).toBe('')
+  })
+
+  it('falls back through source and empty synopsis', () => {
+    expect(displaySynopsis({ synopsis: 'Source synopsis' })).toBe('Source synopsis')
+    expect(displaySynopsis({})).toBe('')
+  })
+
+  it('handles missing community mean and count', () => {
+    expect(communityScore({ communityRatingCount: 2 })).toBe(0)
+    expect(communityScore({ communityMeanRating: 9.9 })).toBe(0)
+  })
+
+  it('translates known metadata and preserves unknown values', () => {
+    expect(tType('TV')).toBe('TV动画')
+    expect(tType('Podcast')).toBe('Podcast')
+    expect(tType()).toBe('')
+    expect(tStatus('Finished Airing')).toBe('已完结')
+    expect(tStatus('Paused')).toBe('Paused')
+    expect(tStatus()).toBe('')
+  })
+
+  it('maps known and fallback tag styles', () => {
+    expect(tagClass('romance')).toBe('tag-romance')
+    expect(tagClass('unknown')).toBe('tag-fantasy')
+  })
+
+  it('formats zero, thousands and plain values', () => {
+    expect(formatNumber()).toBe('0')
+    expect(formatNumber(1_500)).toBe('1.5k')
+    expect(formatNumber(999)).toBe('999')
+  })
+
+  it('keeps unknown genres visible and limits cards to three tags', () => {
+    expect(mapGenres(['Unknown', 'Action', 'Comedy', 'Drama'])).toEqual([
+      { label: 'Unknown', type: 'fantasy' },
+      { label: '热血', type: 'action' },
+      { label: '搞笑', type: 'daily' },
+    ])
   })
 })

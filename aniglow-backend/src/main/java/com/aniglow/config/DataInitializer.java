@@ -13,6 +13,7 @@ import com.aniglow.service.JikanSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,9 @@ public class DataInitializer implements CommandLineRunner {
     private final JikanSyncService jikanSyncService;
     private final AnimeChineseTitleSeedService animeChineseTitleSeedService;
 
+    @Value("${aniglow.jikan.bootstrap-on-empty:false}")
+    private boolean bootstrapOnEmpty;
+
     @Override
     public void run(String... args) {
         seedAgentCharacters();
@@ -46,7 +50,7 @@ public class DataInitializer implements CommandLineRunner {
 
         long count = animeRepository.count();
 
-        if (count == 0) {
+        if (count == 0 && bootstrapOnEmpty) {
             log.info("数据库为空，启动初始 Jikan 数据同步...");
             try {
                 // 同步 Top 100 动漫
@@ -56,8 +60,10 @@ public class DataInitializer implements CommandLineRunner {
                 log.error("初始同步失败: {}", e.getMessage());
                 log.warn("请检查网络连接和 Jikan API 可用性，或稍后通过 POST /admin/sync/jikan 手动同步");
             }
-        } else {
+        } else if (count > 0) {
             log.info("数据库已有 {} 条动漫数据，跳过初始同步", count);
+        } else {
+            log.info("数据库为空；已跳过外部数据同步，可通过管理接口或开启 aniglow.jikan.bootstrap-on-empty 导入数据");
         }
 
         animeChineseTitleSeedService.seedChineseTitles();

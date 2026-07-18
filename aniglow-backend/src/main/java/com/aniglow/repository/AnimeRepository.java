@@ -48,6 +48,18 @@ public interface AnimeRepository extends JpaRepository<Anime, Long> {
            "ORDER BY a.bayesianRating DESC")
     Page<Anime> searchByTitle(@Param("keyword") String keyword, Pageable pageable);
 
+    @Query(
+            value = "SELECT a.* FROM anime a " +
+                    "WHERE MATCH(a.title, a.title_english, a.title_cn, a.search_aliases) " +
+                    "AGAINST (:query IN BOOLEAN MODE) " +
+                    "ORDER BY a.bayesian_rating DESC",
+            countQuery = "SELECT COUNT(*) FROM anime a " +
+                    "WHERE MATCH(a.title, a.title_english, a.title_cn, a.search_aliases) " +
+                    "AGAINST (:query IN BOOLEAN MODE)",
+            nativeQuery = true
+    )
+    Page<Anime> searchByFullText(@Param("query") String query, Pageable pageable);
+
     // 更新贝叶斯评分
     @Modifying
     @Query("UPDATE Anime a SET a.bayesianRating = :bayesianRating, a.meanRating = :meanRating, " +

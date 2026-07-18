@@ -49,6 +49,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     // Swagger / OpenAPI
                     .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                    .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").hasRole("ADMIN")
                     // 公开 API（context-path 已是 /api，此处路径无需再写 /api 前缀）
                     .requestMatchers("/auth/**").permitAll()
                     .requestMatchers("/anime/**").permitAll()
@@ -83,8 +85,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

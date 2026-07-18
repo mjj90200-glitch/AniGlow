@@ -5,6 +5,7 @@ import com.aniglow.repository.AnimeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashSet;
@@ -524,6 +525,7 @@ public class AnimeChineseTitleSeedService {
     );
 
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public int seedChineseTitles() {
         int updated = 0;
 

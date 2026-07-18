@@ -2,6 +2,7 @@ package com.aniglow.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -18,6 +19,8 @@ import java.util.Set;
     @Index(name = "idx_popularity", columnList = "popularity"),
     @Index(name = "idx_has_agent", columnList = "has_agent"),
     @Index(name = "idx_title_cn", columnList = "title_cn"),
+    @Index(name = "idx_anime_year_season", columnList = "year, season"),
+    @Index(name = "idx_anime_status", columnList = "status"),
     @Index(name = "idx_community_rating", columnList = "community_bayesian_rating DESC"),
     @Index(name = "idx_firefly_votes", columnList = "firefly_vote_count DESC")
 })
@@ -122,9 +125,10 @@ public class Anime {
     @Builder.Default
     private Long fireflyVoteCount = 0L;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "anime_genres", joinColumns = @JoinColumn(name = "anime_id"))
     @Column(name = "genre")
+    @BatchSize(size = 50)
     @Builder.Default
     private Set<String> genres = new HashSet<>();
 

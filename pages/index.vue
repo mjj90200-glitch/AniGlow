@@ -242,95 +242,7 @@
         </NuxtLink>
       </div>
 
-      <!-- 动漫卡片网格 · 4列 x 3行 -->
-      <!-- 加载骨架 -->
-      <div v-if="gridLoading" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
-        <div
-          v-for="n in 8"
-          :key="'skel-' + n"
-          class="rounded-3xl bg-white/40 backdrop-blur-sm animate-pulse"
-        >
-          <div class="aspect-[3/4] bg-cream-200 rounded-t-3xl" />
-          <div class="p-4 space-y-2">
-            <div class="h-4 bg-cream-200 rounded-full w-3/4" />
-            <div class="flex gap-1.5">
-              <div class="h-5 bg-cream-200 rounded-full w-12" />
-              <div class="h-5 bg-cream-200 rounded-full w-14" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 真实数据网格 -->
-      <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
-        <article
-          v-for="(anime, index) in animeList"
-          :key="anime.id"
-          class="anime-card animate-scale-in group"
-          :style="{ animationDelay: `${index * 80}ms` }"
-        >
-          <NuxtLink :to="`/anime/${anime.id}`" class="block">
-
-            <!-- 封面图区域 -->
-            <div class="relative aspect-[3/4] overflow-hidden rounded-t-3xl bg-cream-200">
-              <img
-                :src="anime.cover"
-                :alt="anime.title"
-                class="w-full h-full object-cover transition-transform duration-700
-                       group-hover:scale-110"
-                loading="lazy"
-                @error="($event.target as HTMLImageElement).style.display='none'"
-              />
-
-              <!-- 渐变遮罩 -->
-              <div
-                class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style="background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.5) 100%);"
-              />
-
-              <!-- 右上角评分 -->
-              <div class="absolute top-3 right-3 z-10">
-                <div class="rating-badge text-xs px-2.5 py-1">
-                  <Star class="w-3 h-3" style="fill: #5D4037;" />
-                  {{ anime.rating }}
-                </div>
-              </div>
-
-              <!-- 萤火虫 AIGC 标识 -->
-              <div
-                v-if="anime.hasAgent"
-                class="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-2.5 py-1
-                       rounded-full text-[11px] font-bold text-firefly-700
-                       bg-white/80 backdrop-blur-md border border-white/60"
-              >
-                <span class="firefly-dot" />
-                AIGC
-              </div>
-            </div>
-
-            <!-- 信息区 -->
-            <div class="p-4">
-              <!-- 标题 -->
-              <h3 class="font-extrabold text-gray-800 text-sm mb-2.5 line-clamp-1
-                         group-hover:text-firefly-600 transition-colors duration-300">
-                {{ anime.title }}
-              </h3>
-
-              <!-- 标签组 · 糖果色 -->
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="tag in anime.tags"
-                  :key="tag.label"
-                  class="tag"
-                  :class="tagClass(tag.type)"
-                >
-                  {{ tag.label }}
-                </span>
-              </div>
-            </div>
-          </NuxtLink>
-        </article>
-      </div>
+      <HomeAnimeGrid :loading="gridLoading" :anime-list="animeList" />
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════
@@ -397,69 +309,7 @@
         </NuxtLink>
       </div>
 
-      <!-- 加载骨架 -->
-      <div v-if="communitiesPending" class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
-        <div
-          v-for="n in 4"
-          :key="'com-skel-' + n"
-          class="rounded-3xl bg-white/40 backdrop-blur-sm animate-pulse h-48"
-        />
-      </div>
-
-      <!-- 社区卡片网格 -->
-      <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
-        <NuxtLink
-          v-for="(box, index) in communityCards"
-          :key="box.slug"
-          :to="`/community/${box.slug}`"
-          class="glass-card rounded-3xl p-5 group cursor-pointer
-                 transition-all duration-500 hover:-translate-y-2 animate-scale-in"
-          :style="{ animationDelay: `${index * 80}ms` }"
-        >
-          <!-- 封面图 -->
-          <div class="w-full h-28 rounded-2xl overflow-hidden mb-4 bg-cream-200">
-            <img
-              v-if="box.coverImage"
-              :src="box.coverImage"
-              :alt="box.name"
-              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-              loading="lazy"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center bg-firefly/5">
-              <Users class="w-8 h-8 text-firefly/30" />
-            </div>
-          </div>
-
-          <!-- 信息 -->
-          <h3 class="font-extrabold text-gray-800 text-sm mb-1.5 line-clamp-1
-                     group-hover:text-firefly-600 transition-colors duration-300">
-            {{ box.name }}
-          </h3>
-          <p class="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-3">
-            {{ box.description }}
-          </p>
-
-          <!-- 统计 -->
-          <div class="flex items-center gap-4 text-xs text-gray-400">
-            <span class="inline-flex items-center gap-1">
-              <MessageCircle class="w-3.5 h-3.5" />
-              {{ box.postCount }}
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <Users class="w-3.5 h-3.5" />
-              {{ box.memberCount }}
-            </span>
-          </div>
-        </NuxtLink>
-      </div>
-
-      <!-- 社区为空时的占位 -->
-      <div
-        v-if="!communitiesPending && communityCards.length === 0"
-        class="text-center py-16"
-      >
-        <p class="text-gray-400 text-sm">社区盒子正在搭建中，敬请期待</p>
-      </div>
+      <HomeCommunityBoxes :loading="communitiesPending" :communities="communityCards" />
     </section>
 
   </div>
@@ -497,8 +347,7 @@ const showAgentVote = ref(false)
 
 const { fetchTopRated } = useAnime()
 const { fetchCommunities } = useCommunity()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase || '/api'
+const { request } = useApi()
 
 interface HomeStats {
   animeCount: number
@@ -510,8 +359,7 @@ const { data: homeStatsData } = await useAsyncData(
   'home-public-stats',
   async (): Promise<HomeStats> => {
     try {
-      const res = await $fetch<{ data?: HomeStats }>(`${apiBase}/stats/public`)
-      return res?.data ?? { animeCount: 0, agentCount: 0, memberCount: 0 }
+      return await request<HomeStats>('/stats/public')
     } catch {
       return { animeCount: 0, agentCount: 0, memberCount: 0 }
     }

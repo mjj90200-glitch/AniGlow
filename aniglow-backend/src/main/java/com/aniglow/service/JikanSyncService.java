@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Jikan API 同步服务
@@ -40,6 +41,7 @@ public class JikanSyncService {
     private final AnimeRepository animeRepository;
     private final RedisRankingService rankingService;
     private final TranslationService translationService;
+    private final AtomicBoolean topSyncRunning = new AtomicBoolean(false);
 
     @Value("${aniglow.jikan.base-url:https://api.jikan.moe/v4}")
     private String baseUrl;
@@ -48,6 +50,7 @@ public class JikanSyncService {
     private long requestDelay;
 
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void tagGenreFromJikan(int genreId, String tag) {
         try {
             long existing = animeRepository.countByGenre(tag);
@@ -88,8 +91,12 @@ public class JikanSyncService {
      * 同步热门动漫（Top Anime）
      * 定时任务：每小时执行一次，获取 Top 625 + 当季新番 + 热门类型
      */
-    @Scheduled(fixedRateString = "${aniglow.jikan.sync-interval:3600000}")
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void syncTopAnime() {
+        if (!topSyncRunning.compareAndSet(false, true)) {
+            log.info("Jikan 同步任务已在运行，跳过本次重复请求");
+            return;
+        }
         log.info("开始同步 Jikan 番剧数据...");
 
         try {
@@ -118,6 +125,8 @@ public class JikanSyncService {
 
         } catch (Exception e) {
             log.error("同步 Jikan 数据时出错", e);
+        } finally {
+            topSyncRunning.set(false);
         }
     }
 
@@ -125,6 +134,7 @@ public class JikanSyncService {
      * 同步当季新番 + 即将上映
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void syncSeasonalAnime() {
         log.info("开始同步当季新番数据...");
         try {
@@ -252,6 +262,7 @@ public class JikanSyncService {
      * 全量同步：Top 榜单 + 当季新番（手动触发用）
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public void fullSync() {
         log.info("=== 开始全量番剧同步 ===");
         syncTopAnime();
@@ -303,6 +314,7 @@ public class JikanSyncService {
      * 根据 MAL ID 同步单个动漫详情
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public Anime syncAnimeByMalId(Long malId) {
         log.info("同步 MAL ID: {}", malId);
 
@@ -335,6 +347,7 @@ public class JikanSyncService {
      * @return 成功修复的数量
      */
     @Transactional
+    @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public int repairMissingChineseSynopses() {
         var animes = animeRepository.findBySynopsisCnIsNullAndSynopsisIsNotNull();
         if (animes.isEmpty()) {

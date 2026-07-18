@@ -12,26 +12,32 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@nuxt/devtools": "latest",
-    "@nuxtjs/tailwindcss": "^6.11.4",
-    "@vitest/coverage-v8": "^4.1.8",
-    "happy-dom": "^20.9.0",
-    "nuxt": "^3.11.0",
-    "typescript": "^5.4.0",
-    "vitest": "^4.1.8",
-    "vue-tsc": "^3.2.8"
+    "@nuxtjs/tailwindcss": "6.14.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "happy-dom": "20.10.6",
+    "nuxt": "3.21.4",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "vue-tsc": "3.2.8"
   },
   "dependencies": {
     "@authing/native-js-ui-components": "4.5.47-bg.18",
-    "@pinia/nuxt": "^0.5.1",
-    "@vueuse/core": "^10.9.0",
-    "@vueuse/nuxt": "^10.9.0",
+    "@pinia/nuxt": "0.5.5",
+    "@vueuse/core": "10.11.1",
+    "@vueuse/nuxt": "10.11.1",
     "authing-js-sdk": "4.23.50",
-    "lucide-vue-next": "^0.344.0",
-    "pinia": "^2.1.7"
+    "lucide-vue-next": "0.344.0",
+    "pinia": "2.3.1"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@nuxt/schema": "3.21.4"
+      }
+    }
   }
 }

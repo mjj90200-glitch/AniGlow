@@ -85,6 +85,7 @@ function writeJson<T>(key: string, value: T) {
 }
 
 export const useDailyStore = defineStore('daily', () => {
+  const { request } = useApi()
   const userStore = useUserStore()
   const state = ref<DailyState>(defaultDailyState())
   const votes = ref<Record<number, AnimeVoteEntry>>({})
@@ -112,10 +113,8 @@ export const useDailyStore = defineStore('daily', () => {
 
   async function refreshVoteLeaderboard(limit = 30) {
     try {
-      const res = await $fetch<{ data?: { content?: any[] } }>('/api/anime/firefly-ranking', {
-        params: { page: 0, size: limit },
-      })
-      const entries = res?.data?.content ?? []
+      const result = await request<{ content?: any[] }>('/anime/firefly-ranking', { params: { page: 0, size: limit } })
+      const entries = result?.content ?? []
       votes.value = entries.reduce<Record<number, AnimeVoteEntry>>((acc, anime) => {
         acc[anime.id] = {
           id: anime.id,
@@ -174,24 +173,10 @@ export const useDailyStore = defineStore('daily', () => {
   async function voteForAnime(anime: { id: number; title: string; cover: string }) {
     hydrate()
     if (state.value.tickets <= 0) return false
-    const apiReady = await userStore.ensureBackendToken()
-    if (!apiReady) {
-      throw new Error('登录状态需要刷新，请重新登录后再投票')
-    }
-
-    const headers: Record<string, string> = {}
-    const token = userStore.backendToken
-    if (token) headers.Authorization = `Bearer ${token}`
-
-    const res = await $fetch<{ success?: boolean; message?: string; data?: { fireflyVoteCount?: number } }>('/api/votes', {
-      method: 'POST',
-      headers,
-      body: { animeId: anime.id },
+    const result = await request<{ fireflyVoteCount?: number }>('/votes', {
+      method: 'POST', auth: true, body: { animeId: anime.id },
     })
-    if (res?.success === false || !res?.data) {
-      throw new Error(res?.message || '投票失败，请稍后重试')
-    }
-    const nextVoteCount = res?.data?.fireflyVoteCount ?? ((votes.value[anime.id]?.votes ?? 0) + 1)
+    const nextVoteCount = result?.fireflyVoteCount ?? ((votes.value[anime.id]?.votes ?? 0) + 1)
 
     votes.value = {
       ...votes.value,
