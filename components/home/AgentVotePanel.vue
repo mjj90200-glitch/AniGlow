@@ -38,7 +38,7 @@
                 :src="c.avatarUrl"
                 :alt="c.displayName"
                 class="w-full h-full object-cover"
-                @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
+                @error="hideBrokenAvatar"
               />
               <div v-if="!c.avatarUrl" class="w-full h-full flex items-center justify-center text-2xl font-black text-firefly/30">
                 {{ c.displayName.slice(0, 1) }}
@@ -143,6 +143,11 @@ async function handleVote(candidateId: number) {
       votingId.value = null
     }
   })
+}
+
+function hideBrokenAvatar(event: Event) {
+  const image = event.target as HTMLImageElement | null
+  if (image) image.style.display = 'none'
 }
 
 watch(() => props.visible, (v) => {
