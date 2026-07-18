@@ -41,6 +41,11 @@ jobs:
               tail -n 120 frontend-test.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            details=$(tail -n 80 frontend-test.log)
+            details=${details//'%'/'%25'}
+            details=${details//$'\r'/'%0D'}
+            details=${details//$'\n'/'%0A'}
+            echo "::error title=Frontend test output::$details"
           fi
           exit "$status"
       - run: pnpm exec nuxi typecheck
