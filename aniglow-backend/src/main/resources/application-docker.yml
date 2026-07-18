@@ -1,0 +1,26 @@
+# ═══════════════════════════════════════════════════════════════
+# 萤火番舍 · Docker 环境配置
+# 激活: SPRING_PROFILES_ACTIVE=docker
+# ═══════════════════════════════════════════════════════════════
+
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:aniglow}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+    username: ${MYSQL_USER:aniglow}
+    password: ${MYSQL_PASSWORD}
+    hikari:
+      minimum-idle: 3
+      maximum-pool-size: 10
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+
+logging:
+  level:
+    com.aniglow: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN

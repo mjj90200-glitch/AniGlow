@@ -1,0 +1,37 @@
+{
+  "name": "aniglow",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.3",
+  "imports": {
+    "#internal/nuxt/paths": "./internal/nuxt/paths.mjs"
+  },
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest",
+    "@nuxtjs/tailwindcss": "^6.11.4",
+    "@vitest/coverage-v8": "^4.1.8",
+    "happy-dom": "^20.9.0",
+    "nuxt": "^3.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.8",
+    "vue-tsc": "^3.2.8"
+  },
+  "dependencies": {
+    "@authing/native-js-ui-components": "4.5.47-bg.18",
+    "@pinia/nuxt": "^0.5.1",
+    "@vueuse/core": "^10.9.0",
+    "@vueuse/nuxt": "^10.9.0",
+    "authing-js-sdk": "4.23.50",
+    "lucide-vue-next": "^0.344.0",
+    "pinia": "^2.1.7"
+  }
+}

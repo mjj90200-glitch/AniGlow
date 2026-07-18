@@ -1,0 +1,133 @@
+server:
+  port: 8081
+  address: 0.0.0.0
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: aniglow-backend
+
+  # MySQL 数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/aniglow?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+
+  # JPA 配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        use_sql_comments: true
+
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+      timeout: 2000ms
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+# 文件上传配置
+aniglow:
+  upload:
+    dir: ${user.home}/aniglow-data
+    max-file-size: 10485760
+    allowed-types: image/jpeg,image/png,image/gif,image/webp
+
+  # 贝叶斯平均分算法配置
+  bayesian:
+    # 全局平均分（基准分）
+    global-mean: 7.0
+    # 最小评分数量阈值（低于此值会往全局平均分回归）
+    min-ratings: 50
+    # 置信权重（越大越倾向于全局平均分）
+    confidence-weight: 25
+
+  # Jikan API 配置
+  jikan:
+    base-url: https://api.jikan.moe/v4
+    sync-interval: 3600000  # 1小时同步一次（毫秒）
+    request-delay: 1000     # API 请求间隔（毫秒）
+
+  # AI Agent 角色对话配置（火山方舟 Ark API / Coding Plan）
+  ai:
+    openai:
+      api-key: ${AI_API_KEY}
+      base-url: ${AI_BASE_URL:https://ark.cn-beijing.volces.com/api/coding/v3}
+      enabled: true
+      timeout: 30000
+      chat:
+        options:
+          model: ${AI_MODEL:doubao-seed-2.0-lite}
+          temperature: 0.7
+      audio:
+        enabled: false
+      embedding:
+        enabled: false
+
+  # JWT 配置 (使用 Base64 编码的密钥，至少 256 位)
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: 86400000    # 24小时（毫秒）
+    refresh-expiration: 604800000  # 7天（毫秒）
+
+# SpringDoc OpenAPI 配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  show-actuator: true
+
+# 日志配置
+logging:
+  level:
+    com.aniglow: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+# 生产环境配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    com.aniglow: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO

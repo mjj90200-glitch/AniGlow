@@ -1,0 +1,126 @@
+# ═══════════════════════════════════════════════════════════════
+# 萤火番舍 AniGlow · Docker Compose 编排
+#
+# 启动:  docker compose up -d
+# 重建:  docker compose up -d --build
+# 日志:  docker compose logs -f
+# 停止:  docker compose down
+# ═══════════════════════════════════════════════════════════════
+
+name: aniglow
+
+services:
+
+  # ─── MySQL 8.0 ──────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: aniglow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aniglow}
+      MYSQL_USER: ${MYSQL_USER:-aniglow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - aniglow-net
+
+  # ─── Redis 7 ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: aniglow-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aniglow-net
+
+  # ─── Spring Boot 后端 ───────────────────────────────────────
+  backend:
+    build:
+      context: ./aniglow-backend
+      dockerfile: Dockerfile
+    container_name: aniglow-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aniglow}
+      MYSQL_USER: ${MYSQL_USER:-aniglow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      AI_API_KEY: ${AI_API_KEY:?AI_API_KEY is required}
+      AI_BASE_URL: ${AI_BASE_URL:-https://ark.cn-beijing.volces.com/api/coding/v3}
+      AI_MODEL: ${AI_MODEL:-doubao-seed-2.0-pro}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    ports:
+      - "8081:8081"
+    networks:
+      - aniglow-net
+
+  # ─── Nuxt 3 前端（含 Authing 服务端 API 代理） ──────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID}
+        NUXT_PUBLIC_AUTHING_HOST: ${NUXT_PUBLIC_AUTHING_HOST:-https://core.authing.cn}
+        NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
+    container_name: aniglow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Authing（前端公开 + 服务端 SDK）
+      NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID}
+      NUXT_AUTHING_APP_SECRET: ${NUXT_AUTHING_APP_SECRET:?NUXT_AUTHING_APP_SECRET is required}
+      NUXT_PUBLIC_AUTHING_HOST: ${NUXT_PUBLIC_AUTHING_HOST:-https://core.authing.cn}
+      NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      # Docker 内部网络：SSR 时通过服务名访问后端
+      NUXT_BACKEND_URL: http://backend:8081
+    ports:
+      - "3000:3000"
+    networks:
+      - aniglow-net
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  aniglow-net:
+    driver: bridge

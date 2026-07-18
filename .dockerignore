@@ -1,0 +1,14 @@
+node_modules
+.nuxt
+.output
+.git
+.gitignore
+logs
+dump.rdb
+README.md
+.env
+.env.docker
+.DS_Store
+*.md
+aniglow-backend/target
+aniglow-backend/.idea

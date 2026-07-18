@@ -1,0 +1,46 @@
+{
+  "name": "萤火番舍 AniGlow",
+  "short_name": "萤火番舍",
+  "description": "发现番剧、参与评分讨论、完成每日任务，为喜欢的作品投出萤火。",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#FDFBF7",
+  "theme_color": "#00E676",
+  "categories": ["entertainment", "social", "lifestyle"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/pwa/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "番剧",
+      "short_name": "番剧",
+      "description": "快速打开番剧花园",
+      "url": "/anime?source=pwa-shortcut",
+      "icons": [{ "src": "/pwa/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "排行",
+      "short_name": "排行",
+      "description": "查看萤火排行",
+      "url": "/ranking?source=pwa-shortcut",
+      "icons": [{ "src": "/pwa/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Agent",
+      "short_name": "Agent",
+      "description": "与番舍角色对话",
+      "url": "/agent?source=pwa-shortcut",
+      "icons": [{ "src": "/pwa/app-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.aniglow.frontend</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/mac/Library/Application Support/AniGlow/bin/aniglow-frontend-service</string>
+  </array>
+  <key>UserName</key>
+  <string>mac</string>
+  <key>GroupName</key>
+  <string>staff</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/mac/Library/Application Support/AniGlow/frontend</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/mac/Library/Application Support/AniGlow/logs/frontend.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/mac/Library/Application Support/AniGlow/logs/frontend-error.log</string>
+</dict>
+</plist>

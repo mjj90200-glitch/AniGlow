@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AniGlow">
+  <defs>
+    <linearGradient id="glow" x1="12" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B8FFF1"/>
+      <stop offset="0.48" stop-color="#00E676"/>
+      <stop offset="1" stop-color="#7CFFB2"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#glow)"/>
+  <path
+    d="M32 10c1.8 9.7 5.9 14 16 16-10.1 2-14.2 6.3-16 16-1.8-9.7-5.9-14-16-16 10.1-2 14.2-6.3 16-16Z"
+    fill="#fff"
+    filter="url(#soft)"
+  />
+  <circle cx="47" cy="43" r="4.5" fill="#fff" opacity="0.95"/>
+  <circle cx="18" cy="44" r="3.4" fill="#EFFFF8" opacity="0.9"/>
+</svg>

@@ -1,0 +1,479 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIGLOW · 萤火番舍 — Global Style System
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    @apply text-gray-700 antialiased;
+    /* 奶油色渐变底色 */
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255, 228, 233, 0.3) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 80% 30%, rgba(232, 244, 248, 0.35) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 40% at 50% 80%, rgba(0, 230, 118, 0.04) 0%, transparent 50%),
+      linear-gradient(180deg, #FDFBF7 0%, #FAF6EE 40%, #F5F1E8 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    overscroll-behavior-y: auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  @media (max-width: 1023px) {
+    body {
+      background-attachment: scroll;
+    }
+
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
+  /* 选中文字 */
+  ::selection {
+    background: rgba(0, 230, 118, 0.2);
+    color: #006E26;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT LAYER · 琉璃组件体系
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+  /* ── 琉璃卡片 ─────────────────────────────────────────────── */
+
+  .glass-card {
+    @apply relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.25rem;
+    box-shadow:
+      0 8px 32px rgba(160, 216, 239, 0.15),
+      0 2px 8px rgba(255, 192, 203, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card:hover {
+    box-shadow:
+      0 16px 48px rgba(160, 216, 239, 0.22),
+      0 4px 16px rgba(255, 192, 203, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    transform: translateY(-2px);
+  }
+
+  .glass-card-cream {
+    @apply relative overflow-hidden;
+    background: linear-gradient(135deg, rgba(253, 251, 247, 0.88) 0%, rgba(250, 246, 238, 0.82) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 8px 32px rgba(160, 216, 239, 0.18),
+      0 2px 8px rgba(255, 192, 203, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-card-cream:hover {
+    box-shadow:
+      0 16px 48px rgba(160, 216, 239, 0.25),
+      0 4px 16px rgba(255, 192, 203, 0.15);
+    transform: translateY(-2px);
+  }
+
+  /* ── 导航栏毛玻璃 ─────────────────────────────────────────── */
+
+  .glass-nav {
+    background: rgba(253, 251, 247, 0.72);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 20px rgba(160, 216, 239, 0.1);
+  }
+
+  .glass-nav.scrolled {
+    background: rgba(253, 251, 247, 0.85);
+    backdrop-filter: blur(28px) saturate(1.3);
+    box-shadow: 0 4px 24px rgba(160, 216, 239, 0.15);
+  }
+
+  /* ── 动漫卡片 ─────────────────────────────────────────────── */
+
+  .anime-card {
+    @apply relative overflow-hidden bg-white;
+    border-radius: 1.25rem;
+    box-shadow:
+      0 4px 20px rgba(160, 216, 239, 0.15),
+      0 1px 4px rgba(255, 192, 203, 0.08);
+    transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
+
+  .anime-card:hover {
+    box-shadow:
+      0 16px 48px rgba(160, 216, 239, 0.25),
+      0 4px 16px rgba(255, 192, 203, 0.15);
+    transform: translateY(-4px);
+  }
+
+  /* ── 标签系统 · 糖果色 ────────────────────────────────────── */
+
+  .tag {
+    @apply inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full;
+    transition: all 0.2s ease;
+  }
+
+  .tag-fantasy {
+    background: rgba(160, 216, 239, 0.2);
+    color: #4098C3;
+  }
+  .tag-romance {
+    background: rgba(255, 192, 203, 0.2);
+    color: #D0707F;
+  }
+  .tag-action {
+    background: rgba(255, 179, 126, 0.2);
+    color: #E07B3E;
+  }
+  .tag-healing {
+    background: rgba(168, 230, 207, 0.2);
+    color: #4DB380;
+  }
+  .tag-scifi {
+    background: rgba(197, 185, 232, 0.2);
+    color: #9074C5;
+  }
+  .tag-youth {
+    background: rgba(160, 216, 239, 0.18);
+    color: #58A8CE;
+  }
+  .tag-adventure {
+    background: rgba(255, 213, 79, 0.2);
+    color: #C79100;
+  }
+  .tag-daily {
+    background: rgba(180, 220, 210, 0.2);
+    color: #3D8B7A;
+  }
+  .tag-horror {
+    background: rgba(200, 180, 210, 0.2);
+    color: #7B5EA7;
+  }
+  .tag-new {
+    background: linear-gradient(135deg, rgba(0, 230, 118, 0.18), rgba(0, 200, 83, 0.12));
+    color: #00AA44;
+    font-weight: 700;
+  }
+
+  /* ── 按钮体系 ─────────────────────────────────────────────── */
+
+  .btn-glow {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3.5
+           text-white font-bold rounded-full text-sm;
+    background: linear-gradient(135deg, #00E676 0%, #00C853 100%);
+    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-glow:hover {
+    box-shadow: 0 8px 32px rgba(0, 230, 118, 0.45);
+    transform: translateY(-1px) scale(1.02);
+  }
+  .btn-glow:active {
+    transform: scale(0.97);
+  }
+
+  .btn-sakura {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3.5
+           text-white font-bold rounded-full text-sm;
+    background: linear-gradient(135deg, #FFC0CB 0%, #FF9AAE 100%);
+    box-shadow: 0 4px 20px rgba(255, 192, 203, 0.3);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-sakura:hover {
+    box-shadow: 0 8px 32px rgba(255, 192, 203, 0.45);
+    transform: translateY(-1px) scale(1.02);
+  }
+  .btn-sakura:active {
+    transform: scale(0.97);
+  }
+
+  .btn-glass {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3
+           text-gray-700 font-semibold rounded-full text-sm;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 12px rgba(160, 216, 239, 0.1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-glass:hover {
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 6px 24px rgba(160, 216, 239, 0.2);
+    transform: translateY(-1px);
+  }
+
+  /* ── 评分徽章 ─────────────────────────────────────────────── */
+
+  .rating-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+           text-sm font-extrabold;
+    background: linear-gradient(135deg, #FFD54F 0%, #FFB300 100%);
+    color: #5D4037;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.25);
+  }
+
+  /* ── 萤火虫微光指示器 ─────────────────────────────────────── */
+
+  .firefly-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+    background: #00E676;
+    box-shadow: 0 0 8px rgba(0, 230, 118, 0.6), 0 0 16px rgba(0, 230, 118, 0.3);
+    animation: fireflyPulse 2s ease-in-out infinite;
+  }
+
+  /* ── Hero 标题文字 ────────────────────────────────────────── */
+
+  .hero-title {
+    @apply font-extrabold leading-tight;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #4098C3 0%, #00C853 40%, #FF9AAE 100%);
+  }
+
+  /* ── 分隔线 ───────────────────────────────────────────────── */
+
+  .divider-glow {
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 230, 118, 0.3) 50%, transparent 100%);
+    border: none;
+  }
+
+  .authing-glass-shell {
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow:
+      0 24px 80px rgba(64, 152, 195, 0.18),
+      0 8px 28px rgba(0, 230, 118, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+  }
+
+  /* ── 向后兼容别名 (Legacy) ───────────────────────────────── */
+
+  .soft-card {
+    @apply bg-white rounded-3xl;
+    box-shadow: 0 4px 20px rgba(160, 216, 239, 0.2), 0 2px 8px rgba(255, 192, 203, 0.1);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #7BC4E0 0%, #FF9AAE 100%);
+  }
+
+  .bg-hero-gradient {
+    background: linear-gradient(135deg, #FDFBF7 0%, #FAF6EE 50%, #F5F1E8 100%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY LAYER · 工具类动画
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+
+  /* 浮动光斑 */
+  .glow-spot {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-spot-firefly {
+    background: rgba(0, 230, 118, 0.12);
+    animation: glowSpotFloat 8s ease-in-out infinite;
+  }
+
+  .glow-spot-sakura {
+    background: rgba(255, 192, 203, 0.1);
+    animation: glowSpotFloat 10s ease-in-out infinite reverse;
+  }
+
+  .glow-spot-sky {
+    background: rgba(160, 216, 239, 0.1);
+    animation: glowSpotFloat 9s ease-in-out infinite;
+    animation-delay: 3s;
+  }
+
+  /* 动画工具 */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.6s ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* 卡顿延迟 */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   萤火虫特效
+   ═══════════════════════════════════════════════════════════════ */
+
+.login-firefly {
+  position: absolute;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #00E676;
+  box-shadow:
+    0 0 10px rgba(0, 230, 118, 0.75),
+    0 0 22px rgba(0, 230, 118, 0.38);
+  animation: loginFireflyRise 1.45s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYFRAMES · 全局动画定义
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-12px); }
+}
+
+@keyframes glowSpotFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  25%      { transform: translate(15px, -20px) scale(1.1); opacity: 0.8; }
+  50%      { transform: translate(-10px, -35px) scale(0.95); opacity: 0.5; }
+  75%      { transform: translate(-20px, -10px) scale(1.05); opacity: 0.7; }
+}
+
+@keyframes fireflyPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.3); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes loginFireflyRise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.72);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc((var(--tw-translate-x, 0px)) + 12px), -132px, 0) scale(1.12);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR · 萤火定制滚动条
+   ═══════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(253, 251, 247, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #A0D8EF 0%, #00E676 50%, #FFC0CB 100%);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #7BC4E0 0%, #00C853 50%, #FF9AAE 100%);
+  background-clip: content-box;
+}

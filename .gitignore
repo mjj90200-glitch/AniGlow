@@ -1,0 +1,48 @@
+# Nuxt dev/build outputs
+.output
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+package-lock.json
+
+# Logs
+logs
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Misc
+.DS_Store
+.fleet
+.idea
+.claude
+
+# Redis dump
+dump.rdb
+
+# Maven build output (backend)
+aniglow-backend/target/
+aniglow-backend/BOOT-INF/
+aniglow-backend/package.json
+aniglow-backend/package-lock.json
+aniglow-backend/pnpm-lock.yaml
+
+# Local planning/runtime artifacts
+.superpowers/
+test_sucess
+
+# IDE
+*.iml
+.idea/
+
+# Local env files
+.env
+.env.*
+!.env.example
