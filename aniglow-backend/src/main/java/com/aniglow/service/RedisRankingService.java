@@ -2,7 +2,6 @@ package com.aniglow.service;
 
 import com.aniglow.entity.Anime;
 import com.aniglow.repository.AnimeRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -173,7 +172,6 @@ public class RedisRankingService {
      * 定时任务：每天凌晨 2 点执行
      */
     @Scheduled(cron = "0 0 2 * * ?")
-    @PostConstruct
     public void rebuildAllRankings() {
         log.info("开始重建排行榜...");
 
