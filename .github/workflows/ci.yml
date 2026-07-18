@@ -27,7 +27,22 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - name: Run frontend tests
+        shell: bash
+        run: |
+          set +e
+          pnpm test 2>&1 | tee frontend-test.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "### Frontend test failure"
+              echo '```text'
+              tail -n 120 frontend-test.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - run: pnpm exec nuxi typecheck
       - run: pnpm build
 
