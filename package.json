@@ -31,7 +31,9 @@
     "@vueuse/nuxt": "10.11.1",
     "authing-js-sdk": "4.23.50",
     "lucide-vue-next": "0.344.0",
-    "pinia": "2.3.1"
+    "pinia": "2.3.1",
+    "vue": "3.5.33",
+    "vue-router": "4.6.4"
   },
   "pnpm": {
     "peerDependencyRules": {
