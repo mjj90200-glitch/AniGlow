@@ -232,24 +232,29 @@ interface AgentCharacterConfig {
   openingAudioUrl?: string | null
 }
 
-const { data: charactersData } = await useAsyncData('agent-characters', async () => {
+const charactersRequest = useAsyncData('agent-characters', async () => {
   try {
     const data = await request<AgentCharacterConfig[]>('/agent/characters')
     return data?.length ? data : DEFAULT_CHARACTERS
   } catch { return DEFAULT_CHARACTERS }
 })
 
-const currentCharacterSource = computed(() => {
-  const chars = charactersData.value ?? []
-  const found = chars.find(c => c.code === selectedRole.value)
-  return found?.sourceTitle || ''
-})
-
-const { data: rolesData } = await useAsyncData('agent-roles', async () => {
+const rolesRequest = useAsyncData('agent-roles', async () => {
   try {
     const data = await request<Record<string, string>>('/agent/roles')
     return data && Object.keys(data).length > 0 ? data : DEFAULT_ROLES
   } catch { return DEFAULT_ROLES }
+})
+
+// Register every Nuxt composable before yielding so SSR keeps the active app context.
+const [charactersAsyncData, rolesAsyncData] = await Promise.all([charactersRequest, rolesRequest])
+const charactersData = charactersAsyncData.data
+const rolesData = rolesAsyncData.data
+
+const currentCharacterSource = computed(() => {
+  const chars = charactersData.value ?? []
+  const found = chars.find(c => c.code === selectedRole.value)
+  return found?.sourceTitle || ''
 })
 
 watchEffect(() => {
