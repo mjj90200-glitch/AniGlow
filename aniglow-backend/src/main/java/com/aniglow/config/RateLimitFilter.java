@@ -26,6 +26,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Duration ONE_MINUTE = Duration.ofMinutes(1);
 
     private final RequestRateLimiter rateLimiter;
+    private final ClientIpResolver clientIpResolver;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -85,15 +86,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl user) {
             return "user:" + user.getId();
         }
-        return "ip:" + clientIp(request);
-    }
-
-    private String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",", 2)[0].trim();
-        }
-        return request.getRemoteAddr();
+        return "ip:" + clientIpResolver.resolve(request);
     }
 
     private record Rule(String name, int limit) {

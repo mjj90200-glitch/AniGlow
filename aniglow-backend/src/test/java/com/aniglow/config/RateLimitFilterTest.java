@@ -18,7 +18,11 @@ class RateLimitFilterTest {
     @Test
     void sixthLoginAttemptReturns429() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        RateLimitFilter filter = new RateLimitFilter(new RequestRateLimiter(), objectMapper);
+        RateLimitFilter filter = new RateLimitFilter(
+                new RequestRateLimiter(),
+                new ClientIpResolver("127.0.0.1/32,::1/128"),
+                objectMapper
+        );
         FilterChain chain = mock(FilterChain.class);
 
         for (int attempt = 1; attempt <= 5; attempt++) {
@@ -34,6 +38,27 @@ class RateLimitFilterTest {
         assertThat(blocked.getHeader("Retry-After")).isEqualTo("60");
         assertThat(blocked.getContentAsString()).contains("请求过于频繁");
         verify(chain, times(5)).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void untrustedClientCannotRotateForwardedHeaderToBypassLimit() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        RateLimitFilter filter = new RateLimitFilter(
+                new RequestRateLimiter(),
+                new ClientIpResolver("127.0.0.1/32,::1/128"),
+                objectMapper
+        );
+        FilterChain chain = mock(FilterChain.class);
+
+        for (int attempt = 1; attempt <= 6; attempt++) {
+            MockHttpServletRequest request = loginRequest("203.0.113.8");
+            request.addHeader("X-Forwarded-For", "198.51.100." + attempt);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(request, response, chain);
+            if (attempt == 6) {
+                assertThat(response.getStatus()).isEqualTo(429);
+            }
+        }
     }
 
     private MockHttpServletRequest loginRequest(String clientIp) {

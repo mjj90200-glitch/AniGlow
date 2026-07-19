@@ -10,7 +10,9 @@ export async function exchangeBackendToken(
     email?: string
     phone?: string
   },
-  backendUrl: string
+  backendUrl: string,
+  bridgeSecret: string,
+  clientIp: string,
 ): Promise<{
   token: string
   userId: number
@@ -20,10 +22,17 @@ export async function exchangeBackendToken(
   phone?: string
   profileComplete?: boolean
 } | null> {
+  if (!bridgeSecret) {
+    throw new Error('认证桥接密钥未配置')
+  }
   try {
     const res: any = await $fetch(`${backendUrl}/api/auth/authing-login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Bridge-Secret': bridgeSecret,
+        'X-Forwarded-For': clientIp,
+      },
       body: {
         authingId: String(authingUser.id),
         username: authingUser.name || '',

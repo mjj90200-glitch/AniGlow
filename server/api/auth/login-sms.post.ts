@@ -5,6 +5,7 @@
 import { AuthenticationClient } from 'authing-js-sdk'
 
 export default defineEventHandler(async (event) => {
+  enforceRequestRateLimit(event, 'auth-login-sms-ip', 5, 60)
   const config = useRuntimeConfig(event)
   const appId = config.public.authingAppId as string
   const host = (config.public.authingHost as string) || 'https://core.authing.cn'
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!code || code.length < 4) {
     throw createError({ statusCode: 400, message: '验证码不能为空' })
   }
+  enforceRequestRateLimit(event, 'auth-login-sms-phone', 5, 60, phone)
 
   try {
     const client = new AuthenticationClient({ appId, appHost: host })
@@ -38,7 +40,12 @@ export default defineEventHandler(async (event) => {
 
     // 交换后端 JWT
     const backendUrl = (config.backendUrl as string) || 'http://localhost:8081'
-    const backendAuth = await exchangeBackendToken(authingUser, backendUrl)
+    const backendAuth = await exchangeBackendToken(
+      authingUser,
+      backendUrl,
+      String(config.authBridgeSecret || ''),
+      requestClientIp(event),
+    )
 
     return {
       token: result?.token || result?.accessToken || result?.idToken,

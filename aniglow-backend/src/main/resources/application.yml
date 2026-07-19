@@ -11,7 +11,7 @@ spring:
   # MySQL 数据源配置
   datasource:
     url: jdbc:mysql://localhost:3306/aniglow?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
-    username: ${MYSQL_USER:root}
+    username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -63,8 +63,12 @@ spring:
 
 # 文件上传配置
 aniglow:
+  auth:
+    bridge-secret: ${AUTH_BRIDGE_SECRET}
   cache:
     key-prefix: "aniglow::"
+  security:
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1/32,::1/128}
   scheduling:
     enabled: true
   search:

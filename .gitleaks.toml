@@ -1,0 +1,17 @@
+title = "AniGlow secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The same deterministic JWT key is used only by isolated tests."
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+paths = [
+  '''aniglow-backend/src/test/resources/application-test\.yml''',
+  '''aniglow-backend/src/test/java/com/aniglow/security/JwtUtilsTest\.java''',
+]
+regexes = [
+  '''YW5pZ2xvdy1qd3Qtc2VjcmV0LWtleS1mb3Itc3ByaW5nLWJvb3QtYXBwbGljYXRpb24tdGVzdGtleTEyMzQ1Ng==''',
+]

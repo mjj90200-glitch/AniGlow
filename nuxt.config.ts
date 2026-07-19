@@ -56,6 +56,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     backendUrl: 'http://localhost:8081',
     authingAppSecret: '',
+    authBridgeSecret: '',
+    trustedProxies: '127.0.0.1/32,::1/128',
 
     public: {
       apiBase: '/api',

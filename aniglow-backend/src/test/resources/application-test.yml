@@ -42,6 +42,8 @@ spring:
       max-request-size: 50MB
 
 aniglow:
+  auth:
+    bridge-secret: test-auth-bridge-secret-32-characters-minimum
   search:
     fulltext-enabled: false
   upload:

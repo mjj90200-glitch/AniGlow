@@ -3,6 +3,7 @@
  * 处理 Authing OIDC 回调 — 用 code 交换 token
  */
 export default defineEventHandler(async (event) => {
+  enforceRequestRateLimit(event, 'auth-callback-ip', 10, 60)
   const config = useRuntimeConfig(event)
   const body = await readBody(event)
 
@@ -74,7 +75,12 @@ export default defineEventHandler(async (event) => {
 
     // 交换后端 JWT
     const backendUrl = (config.backendUrl as string) || 'http://localhost:8081'
-    const backendAuth = await exchangeBackendToken(authingUser, backendUrl)
+    const backendAuth = await exchangeBackendToken(
+      authingUser,
+      backendUrl,
+      String(config.authBridgeSecret || ''),
+      requestClientIp(event),
+    )
 
     return {
       token: tokenResponse.id_token || tokenResponse.access_token,

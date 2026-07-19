@@ -5,6 +5,7 @@
 import { AuthenticationClient } from 'authing-js-sdk'
 
 export default defineEventHandler(async (event) => {
+  enforceRequestRateLimit(event, 'auth-sms-ip', 3, 60)
   const config = useRuntimeConfig(event)
   const appId = config.public.authingAppId as string
   const host = (config.public.authingHost as string) || 'https://core.authing.cn'
@@ -19,6 +20,7 @@ export default defineEventHandler(async (event) => {
   if (!phone || !/^1\d{10}$/.test(phone)) {
     throw createError({ statusCode: 400, message: '手机号格式不正确' })
   }
+  enforceRequestRateLimit(event, 'auth-sms-phone', 1, 60, phone)
 
   try {
     const client = new AuthenticationClient({ appId, appHost: host })

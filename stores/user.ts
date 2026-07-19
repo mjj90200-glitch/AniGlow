@@ -254,7 +254,6 @@ export const useUserStore = defineStore('user', () => {
         profileComplete?: boolean
       }>('/api/auth/backend-token', {
         method: 'POST',
-        body: { user: user.value },
       })
 
       if (!res?.backendToken) return false

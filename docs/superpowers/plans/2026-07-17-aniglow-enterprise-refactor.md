@@ -8,7 +8,7 @@
 
 **Tech Stack:** 前端 Nuxt 3 (Vue 3 + Pinia + Tailwind) / 后端 Spring Boot 3.5.16 + JPA + MySQL + Redis + JWT + Authing + 火山方舟 AI / Docker Compose 部署
 
-**Implementation status (2026-07-18):** Phase 2 与 Phase 3 已全部完成并部署验证。具体改动与发布检查见 `docs/refactor/phase-2-3-implementation.md`。
+**Implementation status (2026-07-19):** Phase 1、Phase 2 与 Phase 3 已全部完成并部署验证。安全加固见 `docs/refactor/phase-1-security-implementation.md`，其余重构与发布检查见 `docs/refactor/phase-2-3-implementation.md`。
 
 ---
 ---
@@ -29,7 +29,7 @@
 1. 登录数据库/火山方舟控制台/各外部服务，**轮换所有三组密钥**，拿到新值。
 2. `application.yml` 默认段删除所有明文兜底值，改为 `${DB_PASSWORD}`、`${VOLCANO_API_KEY}`、`${JWT_SECRET}`，缺环境变量即启动失败——不留默认值。
 3. `application-docker.yml` 同步去掉所有明文兜底。
-4. `docker-compose.yml` 去掉所有 `password: ${MYSQL_ROOT_PASSWORD:-removed-default-password}` 的默认值，改为 `${MYSQL_ROOT_PASSWORD:?required}`。
+4. `docker-compose.yml` 去掉所有数据库弱默认密码，改为 `${MYSQL_ROOT_PASSWORD:?required}`。
 5. 创建 `.env.example` 仅保留变量名（值清空或填 `changeme`），供新环境自举。
 6. 用 `git filter-repo` 或 `BFG Repo-Cleaner` 清理 git 历史中的密钥痕迹（⚠️ 需团队协调，所有人先提交，操作后 force push 到 master 需全员重新 clone）。
 

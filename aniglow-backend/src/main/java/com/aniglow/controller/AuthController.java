@@ -2,6 +2,7 @@ package com.aniglow.controller;
 
 import com.aniglow.dto.ApiResponse;
 import com.aniglow.dto.auth.*;
+import com.aniglow.security.AuthBridgeVerifier;
 import com.aniglow.security.UserDetailsImpl;
 import com.aniglow.service.AuthService;
 import jakarta.validation.Valid;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthBridgeVerifier authBridgeVerifier;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
@@ -29,7 +31,10 @@ public class AuthController {
     }
 
     @PostMapping("/authing-login")
-    public ResponseEntity<ApiResponse<AuthResponse>> authingLogin(@Valid @RequestBody AuthingLoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> authingLogin(
+            @RequestHeader(value = "X-Auth-Bridge-Secret", required = false) String bridgeSecret,
+            @Valid @RequestBody AuthingLoginRequest request) {
+        authBridgeVerifier.requireValid(bridgeSecret);
         return success("登录成功", authService.authingLogin(request));
     }
 

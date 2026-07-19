@@ -33,7 +33,7 @@ docker compose up -d --build
 curl http://localhost:8081/api/actuator/health
 ```
 
-`.env` 不得提交。`MYSQL_PASSWORD`、`JWT_SECRET`、`AI_API_KEY` 和 `NUXT_AUTHING_APP_SECRET` 缺失时，生产编排会直接失败。
+`.env` 不得提交。`MYSQL_PASSWORD`、`JWT_SECRET`、`AI_API_KEY`、`NUXT_AUTHING_APP_SECRET`、`AUTH_BRIDGE_SECRET` 和 Authing App ID 缺失时，生产编排会直接失败。认证桥接密钥至少使用 32 字符随机值，前后端必须配置同一个值。
 
 ## 数据迁移
 
@@ -52,7 +52,7 @@ pnpm build
 cd aniglow-backend && mvn verify
 ```
 
-前端测试包含覆盖率阈值；后端覆盖鉴权、限流、JWT、分页、评分、投票、TraceId 和 API 集成。CI 在每次推送和 PR 上执行完整测试、类型检查与构建。
+前端测试包含覆盖率阈值；后端覆盖鉴权、限流、JWT、分页、评分、投票、TraceId 和 API 集成。CI 在每次推送和 PR 上执行密钥扫描、完整测试、类型检查与构建。
 
 ## 运维入口
 

@@ -16,6 +16,9 @@ services:
     image: mysql:8.0
     container_name: aniglow-mysql
     restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-aniglow}
@@ -23,7 +26,6 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     ports:
       - "3307:3306"
     healthcheck:
@@ -84,6 +86,8 @@ services:
       AI_BASE_URL: ${AI_BASE_URL:-https://ark.cn-beijing.volces.com/api/coding/v3}
       AI_MODEL: ${AI_MODEL:-doubao-seed-2.0-pro}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      AUTH_BRIDGE_SECRET: ${AUTH_BRIDGE_SECRET:?AUTH_BRIDGE_SECRET is required}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32,::1/128,172.16.0.0/12}
     ports:
       - "8081:8081"
     healthcheck:
@@ -101,7 +105,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID}
+        NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID:?NUXT_PUBLIC_AUTHING_APP_ID is required}
         NUXT_PUBLIC_AUTHING_HOST: ${NUXT_PUBLIC_AUTHING_HOST:-https://core.authing.cn}
         NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
     container_name: aniglow-frontend
@@ -111,8 +115,10 @@ services:
         condition: service_healthy
     environment:
       # Authing（前端公开 + 服务端 SDK）
-      NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID}
+      NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID:?NUXT_PUBLIC_AUTHING_APP_ID is required}
       NUXT_AUTHING_APP_SECRET: ${NUXT_AUTHING_APP_SECRET:?NUXT_AUTHING_APP_SECRET is required}
+      NUXT_AUTH_BRIDGE_SECRET: ${AUTH_BRIDGE_SECRET:?AUTH_BRIDGE_SECRET is required}
+      NUXT_TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32,::1/128,172.16.0.0/12}
       NUXT_PUBLIC_AUTHING_HOST: ${NUXT_PUBLIC_AUTHING_HOST:-https://core.authing.cn}
       NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-http://localhost:3000}
       # Docker 内部网络：SSR 时通过服务名访问后端

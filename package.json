@@ -30,6 +30,7 @@
     "@vueuse/core": "10.11.1",
     "@vueuse/nuxt": "10.11.1",
     "authing-js-sdk": "4.23.50",
+    "h3": "1.15.11",
     "lucide-vue-next": "0.344.0",
     "pinia": "2.3.1",
     "vue": "3.5.33",

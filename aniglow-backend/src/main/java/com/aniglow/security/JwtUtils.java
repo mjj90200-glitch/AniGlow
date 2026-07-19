@@ -20,7 +20,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtils {
 
-    @Value("${aniglow.jwt.secret:your_jwt_secret_key_here_should_be_at_least_256_bits_long}")
+    @Value("${aniglow.jwt.secret}")
     private String jwtSecret;
 
     @Value("${aniglow.jwt.expiration:86400000}")
