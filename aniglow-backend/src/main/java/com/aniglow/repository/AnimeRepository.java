@@ -113,7 +113,7 @@ public interface AnimeRepository extends JpaRepository<Anime, Long> {
     @Query("SELECT COUNT(DISTINCT a.id) FROM Anime a JOIN a.genres g WHERE g = :genre")
     long countByGenre(@Param("genre") String genre);
 
-    // 综合筛选：关键词 + 题材 + 类型 + 年份 + 国家/地区，全部可选，组合过滤
+    // 综合筛选：关键词 + 题材 + 类型 + 年份（单年或区间）+ 国家/地区，全部可选，组合过滤
     @Query("""
            SELECT DISTINCT a FROM Anime a LEFT JOIN a.genres g
            WHERE (:keyword IS NULL OR LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -123,13 +123,15 @@ public interface AnimeRepository extends JpaRepository<Anime, Long> {
                OR LOWER(a.searchAliases) LIKE LOWER(CONCAT('%', :keyword, '%')))
              AND (:genre IS NULL OR g = :genre)
              AND (:type IS NULL OR a.type = :type)
-             AND (:year IS NULL OR a.year = :year)
              AND (:country IS NULL OR a.country = :country)
+             AND (:yearFrom IS NULL OR a.year >= :yearFrom)
+             AND (:yearTo IS NULL OR a.year <= :yearTo)
            """)
     Page<Anime> filterAnime(@Param("keyword") String keyword,
                             @Param("genre") String genre,
                             @Param("type") String type,
-                            @Param("year") Integer year,
+                            @Param("yearFrom") Integer yearFrom,
+                            @Param("yearTo") Integer yearTo,
                             @Param("country") String country,
                             Pageable pageable);
 

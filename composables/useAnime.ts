@@ -74,7 +74,7 @@ export function useAnime() {
   }
 
   const fetchFilteredAnime = async (
-    filters: { keyword?: string; genre?: string; type?: string; year?: number; country?: string },
+    filters: { keyword?: string; genre?: string; type?: string; yearFrom?: number; yearTo?: number; country?: string },
     page = 0,
     size = 20,
   ): Promise<AnimeListResponse> => {
@@ -84,7 +84,8 @@ export function useAnime() {
           keyword: filters.keyword || undefined,
           genre: filters.genre || undefined,
           type: filters.type || undefined,
-          year: filters.year || undefined,
+          yearFrom: filters.yearFrom || undefined,
+          yearTo: filters.yearTo || undefined,
           country: filters.country || undefined,
           page,
           size,

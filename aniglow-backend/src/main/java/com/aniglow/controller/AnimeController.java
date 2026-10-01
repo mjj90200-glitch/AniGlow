@@ -23,16 +23,17 @@ public class AnimeController {
     private final AnimeService animeService;
 
     @GetMapping("/filter")
-    @Operation(summary = "综合筛选番剧", description = "关键词/题材/类型/年份/国家地区可选组合过滤，按贝叶斯评分降序")
+    @Operation(summary = "综合筛选番剧", description = "关键词/题材/类型/年份区间/国家地区可选组合过滤，按贝叶斯评分降序")
     public ResponseEntity<ApiResponse<AnimeListResponse>> filterAnime(
             @Parameter(description = "关键词（标题/别名模糊匹配）") @RequestParam(required = false) String keyword,
             @Parameter(description = "题材（如 Action/Comedy）") @RequestParam(required = false) String genre,
             @Parameter(description = "类型（TV/Movie/ONA/OVA/Special/Music）") @RequestParam(required = false) String type,
-            @Parameter(description = "年份") @RequestParam(required = false) Integer year,
+            @Parameter(description = "起始年份（含）") @RequestParam(required = false) Integer yearFrom,
+            @Parameter(description = "结束年份（含）") @RequestParam(required = false) Integer yearTo,
             @Parameter(description = "国家/地区（如 日本/中国/美国）") @RequestParam(required = false) String country,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "60") int size) {
-        return ok(animeService.filter(keyword, genre, type, year, country, page, size));
+        return ok(animeService.filter(keyword, genre, type, yearFrom, yearTo, country, page, size));
     }
 
     @GetMapping("/filter-options")

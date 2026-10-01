@@ -17,6 +17,7 @@ public class AnimeDto {
 
     private Long id;
     private Long malId;
+    private Long anilistId;
     private String title;
     private String titleJapanese;
     private String titleEnglish;
@@ -25,6 +26,7 @@ public class AnimeDto {
     private String synopsis;
     private String synopsisCn;
     private String coverImage;
+    private String country;
     private String trailerUrl;
     private String type;
     private String status;

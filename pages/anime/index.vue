@@ -114,12 +114,20 @@
       </div>
 
       <!-- 年份 -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-start gap-3">
         <span class="filter-row-label">年份</span>
-        <select v-model="activeYear" class="year-select" aria-label="按年份筛选">
-          <option value="">全部年份</option>
-          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }} 年</option>
-        </select>
+        <div class="flex flex-1 flex-wrap gap-2">
+          <button
+            v-for="option in yearChips"
+            :key="'y-' + option.label"
+            type="button"
+            class="filter-chip"
+            :class="{ 'category-chip-active': activeYearFrom === option.from && activeYearTo === option.to }"
+            @click="activeYearFrom = option.from; activeYearTo = option.to"
+          >
+            {{ option.label }}
+          </button>
+        </div>
       </div>
     </section>
 
@@ -323,11 +331,22 @@ const TYPE_LABELS: Record<string, string> = {
 const activeGenre = ref('')
 const activeType = ref('')
 const activeCountry = ref('')
-const activeYear = ref<number | ''>('')
+const activeYearFrom = ref<number | null>(null)
+const activeYearTo = ref<number | null>(null)
 const currentPage = ref(0)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchInput = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const debouncedSearch = refDebounced(searchInput, 300)
+
+// ── 年份芯片：近年逐年份 + 更早按年代区间（与 B 站一致） ──
+const YEAR_RANGES: { label: string; from: number | null; to: number }[] = [
+  { label: '2014-2010', from: 2010, to: 2014 },
+  { label: '2009-2005', from: 2005, to: 2009 },
+  { label: '2004-2000', from: 2000, to: 2004 },
+  { label: '90年代', from: 1990, to: 1999 },
+  { label: '80年代', from: 1980, to: 1989 },
+  { label: '更早', from: null, to: 1979 },
+]
 
 watch(() => route.query.q, (query) => {
   searchInput.value = typeof query === 'string' ? query : ''
@@ -344,12 +363,13 @@ function resetFilters() {
   activeGenre.value = ''
   activeType.value = ''
   activeCountry.value = ''
-  activeYear.value = ''
+  activeYearFrom.value = null
+  activeYearTo.value = null
 }
 
 const hasActiveFilter = computed(() =>
   !!debouncedSearch.value || !!activeGenre.value || !!activeType.value
-  || !!activeCountry.value || activeYear.value !== '',
+  || !!activeCountry.value || activeYearFrom.value !== null || activeYearTo.value !== null,
 )
 
 function goToPage(page: number) {
@@ -380,7 +400,15 @@ const typeOptions = computed(() => {
   ]
 })
 
-const yearOptions = computed(() => filterOptions.value?.years ?? [])
+const yearChips = computed(() => {
+  const allYears = filterOptions.value?.years ?? []
+  const individual = allYears.filter(y => y >= 2015).sort((a, b) => b - a)
+    .map(y => ({ label: `${y}`, from: y as number | null, to: y as number | null }))
+  const ranges = YEAR_RANGES
+    .filter(r => allYears.some(y => (r.from === null || y >= r.from) && y <= r.to))
+    .map(r => ({ label: r.label, from: r.from as number | null, to: r.to as number | null }))
+  return [{ label: '全部年份', from: null, to: null }, ...individual, ...ranges]
+})
 
 // ═══════ 数据获取：统一筛选接口（关键词与所有条件可自由组合） ═══════
 
@@ -392,14 +420,15 @@ const { data, pending } = await useAsyncData(
         keyword: debouncedSearch.value || undefined,
         genre: activeGenre.value || undefined,
         type: activeType.value || undefined,
-        year: activeYear.value === '' ? undefined : Number(activeYear.value),
+        yearFrom: activeYearFrom.value ?? undefined,
+        yearTo: activeYearTo.value ?? undefined,
         country: activeCountry.value || undefined,
       },
       currentPage.value,
       PAGE_SIZE,
     )
   },
-  { server: true, watch: [debouncedSearch, activeGenre, activeType, activeCountry, activeYear, currentPage] },
+  { server: true, watch: [debouncedSearch, activeGenre, activeType, activeCountry, activeYearFrom, activeYearTo, currentPage] },
 )
 
 // ═══════ 分页状态同步 ═══════
@@ -438,7 +467,7 @@ const visiblePages = computed(() => {
 
 // ═══════ 任意条件变化时回到第一页 ═══════
 
-watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYear], () => {
+watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYearFrom, activeYearTo], () => {
   currentPage.value = 0
 })
 
@@ -540,26 +569,7 @@ onBeforeRouteLeave(() => {
   box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
 }
 
-.year-select {
-  appearance: none;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.62);
-  padding: 0.55rem 2rem 0.55rem 1rem;
-  color: #596473;
-  font-size: 0.82rem;
-  font-weight: 700;
-  outline: none;
-  box-shadow: 0 10px 28px rgba(31, 68, 47, 0.05);
-  transition: all 0.24s ease;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23596473' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.8rem center;
-}
 
-.year-select:focus {
-  border-color: rgba(0, 230, 118, 0.45);
-}
 
 /* ── 分页按钮 ───────────────────────────────────── */
 
