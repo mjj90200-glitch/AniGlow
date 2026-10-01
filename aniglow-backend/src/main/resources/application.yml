@@ -108,14 +108,25 @@ aniglow:
     # 置信权重（越大越倾向于全局平均分）
     confidence-weight: 25
 
-  # Jikan API 配置
+  # Jikan API 配置（数据源已由 AniList 替代，定时任务关闭；代码保留作备用）
   jikan:
     base-url: https://api.jikan.moe/v4
-    sync-interval: 3600000  # 1小时同步一次（毫秒）
-    initial-delay: 300000   # 启动 5 分钟后再执行，避免阻塞 readiness
-    scheduling-enabled: true
+    sync-interval: 3600000
+    initial-delay: 300000
+    scheduling-enabled: false
     bootstrap-on-empty: false
-    request-delay: 1000     # API 请求间隔（毫秒）
+    request-delay: 1000
+
+  # AniList 数据源（主数据源：GraphQL 分页拉取，封面转存自有 OSS）
+  anilist:
+    scheduling-enabled: true
+    sync-interval: 21600000  # 每 6 小时全量刷新（毫秒）
+    initial-delay: 180000    # 启动 3 分钟后首跑
+    pages: 100
+    per-page: 50
+    request-delay-ms: 800
+    cover-delay-ms: 150
+    transfer-covers: true
 
   # AI Agent 角色对话配置（模型接口统一走 spring.ai，见文件头部）
 

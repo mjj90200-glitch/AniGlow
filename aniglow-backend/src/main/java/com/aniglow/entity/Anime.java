@@ -39,6 +39,10 @@ public class Anime {
     @Column(name = "mal_id", unique = true)
     private Long malId;
 
+    // AniList API 的 ID（跨源去重键，与 mal_id 并存）
+    @Column(name = "anilist_id", unique = true)
+    private Long anilistId;
+
     @Column(nullable = false, length = 200)
     private String title;
 

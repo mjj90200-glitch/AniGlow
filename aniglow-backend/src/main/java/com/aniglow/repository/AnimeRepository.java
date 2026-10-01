@@ -20,6 +20,11 @@ public interface AnimeRepository extends JpaRepository<Anime, Long> {
 
     boolean existsByMalId(Long malId);
 
+    Optional<Anime> findByAnilistId(Long anilistId);
+
+    // 存量封面迁移：定位仍指向外部图床（MyAnimeList CDN）的封面
+    List<Anime> findByCoverImageContainingIgnoreCase(String fragment);
+
     // 贝叶斯评分排序
     Page<Anime> findAllByOrderByBayesianRatingDesc(Pageable pageable);
 

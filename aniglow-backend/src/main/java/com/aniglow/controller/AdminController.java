@@ -158,6 +158,37 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("迁移完成: 新上传 " + migrated + " 张，已存在跳过 " + skipped + " 张"));
     }
 
+    @PostMapping("/anime/covers/migrate")
+    @Operation(summary = "迁移存量番剧封面", description = "把仍指向 MyAnimeList CDN 的封面下载并转存到自有存储（异步执行，可重复调用）",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<String>> migrateAnimeCovers() {
+        new Thread(() -> {
+            List<Anime> pending = animeRepository.findByCoverImageContainingIgnoreCase("myanimelist.net");
+            log.info("存量封面迁移开始: 待处理 {} 张", pending.size());
+            int migrated = 0;
+            int failed = 0;
+            for (Anime a : pending) {
+                try {
+                    byte[] img = java.net.http.HttpClient.newHttpClient().send(
+                            java.net.http.HttpRequest.newBuilder()
+                                    .uri(java.net.URI.create(a.getCoverImage()))
+                                    .GET().build(),
+                            java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+                    String key = "covers/mal/" + (a.getMalId() != null ? a.getMalId() : a.getId()) + ".jpg";
+                    a.setCoverImage(imageStore.store(img, key));
+                    animeRepository.save(a);
+                    migrated++;
+                    Thread.sleep(200);
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("封面迁移失败: animeId={} - {}", a.getId(), e.getMessage());
+                }
+            }
+            log.info("存量封面迁移完成: 成功 {} 张，失败 {} 张", migrated, failed);
+        }).start();
+        return ResponseEntity.ok(ApiResponse.success("封面迁移任务已启动，后台执行中"));
+    }
+
     @GetMapping("/system/status")
     @Operation(summary = "系统状态", description = "获取系统运行状态",
             security = @SecurityRequirement(name = "bearerAuth"))
