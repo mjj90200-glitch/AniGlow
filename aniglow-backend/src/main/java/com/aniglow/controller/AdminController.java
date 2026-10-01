@@ -1,9 +1,14 @@
 package com.aniglow.controller;
 
 import com.aniglow.dto.ApiResponse;
+import com.aniglow.dto.community.CommunityDto;
+import com.aniglow.dto.community.CommunityPostDto;
+import com.aniglow.dto.community.CommunityReplyDto;
+import com.aniglow.dto.community.CommunityStatsOverrideRequest;
 import com.aniglow.entity.Anime;
 import com.aniglow.repository.AnimeRepository;
 import com.aniglow.service.BayesianRatingService;
+import com.aniglow.service.CommunityService;
 import com.aniglow.service.JikanSyncService;
 import com.aniglow.service.RedisRankingService;
 import com.aniglow.service.TranslationService;
@@ -11,6 +16,7 @@ import com.aniglow.storage.ImageStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +50,37 @@ public class AdminController {
     private final BayesianRatingService bayesianRatingService;
     private final TranslationService translationService;
     private final AnimeRepository animeRepository;
+    private final CommunityService communityService;
+
+    @PutMapping("/community/posts/{postId}/stats")
+    @Operation(summary = "调整帖子展示数据", description = "管理员专用：设置帖子点赞数或浏览数，用于运营展示和测试数据",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<CommunityPostDto>> overridePostStats(
+            @PathVariable Long postId,
+            @Valid @RequestBody CommunityStatsOverrideRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("帖子展示数据已更新",
+                communityService.overridePostStats(postId, request)));
+    }
+
+    @PutMapping("/community/replies/{replyId}/stats")
+    @Operation(summary = "调整回复展示数据", description = "管理员专用：设置回复点赞数，用于运营展示和测试数据",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<CommunityReplyDto>> overrideReplyStats(
+            @PathVariable Long replyId,
+            @Valid @RequestBody CommunityStatsOverrideRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("回复展示数据已更新",
+                communityService.overrideReplyStats(replyId, request)));
+    }
+
+    @PutMapping("/community/communities/{slug}/stats")
+    @Operation(summary = "调整社区展示数据", description = "管理员专用：设置社区成员数或热度，用于运营展示和测试数据",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<CommunityDto>> overrideCommunityStats(
+            @PathVariable String slug,
+            @Valid @RequestBody CommunityStatsOverrideRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("社区展示数据已更新",
+                communityService.overrideCommunityStats(slug, request)));
+    }
 
     @PostMapping("/sync/jikan")
     @Operation(summary = "手动同步 Jikan Top 数据", description = "立即执行 Jikan Top API 数据同步",
@@ -96,29 +133,46 @@ public class AdminController {
         new Thread(() -> {
             List<Anime> list = animeRepository.findByTitleCnIsNull();
             int total = list.size();
+            log.info("中文标题批量翻译开始: 共 {} 部", total);
             int success = 0;
             int fail = 0;
-            for (Anime a : list) {
-                try {
-                    String cn = translationService.translateTitleToChinese(a.getTitleJapanese(), a.getTitle());
+            int processed = 0;
+            final int BATCH = 15;
+            for (int i = 0; i < list.size(); i += BATCH) {
+                List<Anime> chunk = list.subList(i, Math.min(i + BATCH, list.size()));
+                List<String> sources = new java.util.ArrayList<>();
+                for (Anime a : chunk) {
+                    sources.add(hasText(a.getTitleJapanese()) ? a.getTitleJapanese() : a.getTitle());
+                }
+                List<String> results = translationService.translateTitleBatch(sources);
+                boolean dirty = false;
+                for (int j = 0; j < chunk.size(); j++) {
+                    processed++;
+                    String cn = j < results.size() ? results.get(j) : null;
                     if (cn != null && !cn.isBlank()) {
+                        Anime a = chunk.get(j);
                         a.setTitleCn(cn);
                         animeRepository.save(a);
                         success++;
-                        // API 限速：每 5 部停顿一下
-                        if (success % 5 == 0) {
-                            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-                        }
+                        dirty = true;
                     } else {
                         fail++;
                     }
-                } catch (Exception e) {
-                    fail++;
+                }
+                if (dirty) {
+                    try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                }
+                if ((processed / BATCH) % 10 == 0) {
+                    log.info("标题翻译进度: {}/{}（成功 {}，未识别 {}）", processed, total, success, fail);
                 }
             }
-            log.info("中文标题修复完成: 总计{}部, 成功{}部, 失败{}部", total, success, fail);
+            log.info("中文标题批量翻译完成: 总计 {} 部，成功 {} 部，失败/未识别 {} 部", total, success, fail);
         }).start();
-        return ResponseEntity.ok(ApiResponse.success("中文标题翻译任务已启动，正在后台执行..."));
+        return ResponseEntity.ok(ApiResponse.success("中文标题批量翻译任务已启动，正在后台执行..."));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     @PostMapping("/ratings/recalculate")

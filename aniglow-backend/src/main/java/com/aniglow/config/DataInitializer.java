@@ -2,8 +2,6 @@ package com.aniglow.config;
 
 import com.aniglow.repository.AnimeRepository;
 import com.aniglow.repository.AgentCharacterRepository;
-import com.aniglow.repository.CommunityPostRepository;
-import com.aniglow.repository.CommunityReplyRepository;
 import com.aniglow.repository.CommunityRepository;
 import com.aniglow.entity.AgentCharacter;
 import com.aniglow.entity.Anime;
@@ -35,8 +33,6 @@ public class DataInitializer implements CommandLineRunner {
     private final AnimeRepository animeRepository;
     private final AgentCharacterRepository agentCharacterRepository;
     private final CommunityRepository communityRepository;
-    private final CommunityPostRepository communityPostRepository;
-    private final CommunityReplyRepository communityReplyRepository;
     private final JikanSyncService jikanSyncService;
     private final AnimeChineseTitleSeedService animeChineseTitleSeedService;
 
@@ -106,27 +102,6 @@ public class DataInitializer implements CommandLineRunner {
                         "/community-covers/partner.jpg", 500L, 300L, true)
         );
 
-        // 清理不属于新6个盒子的旧社区及其帖子/回复
-        Set<String> keepSlugs = Set.of("anime", "manga", "game", "vibe-coding", "chat", "partner");
-        List<Community> allCommunities = communityRepository.findAll();
-        for (Community existing : allCommunities) {
-            if (!keepSlugs.contains(existing.getSlug())) {
-                communityReplyRepository.deleteAll(
-                    communityReplyRepository.findAll().stream()
-                        .filter(r -> r.getPost() != null && r.getPost().getCommunity() != null
-                            && r.getPost().getCommunity().getId().equals(existing.getId()))
-                        .toList()
-                );
-                communityPostRepository.deleteAll(
-                    communityPostRepository.findAll().stream()
-                        .filter(p -> p.getCommunity() != null && p.getCommunity().getId().equals(existing.getId()))
-                        .toList()
-                );
-                communityRepository.delete(existing);
-                log.info("已清理旧社区盒子: {}", existing.getSlug());
-            }
-        }
-
         int inserted = 0;
         int updated = 0;
         for (Community community : defaults) {
@@ -138,8 +113,6 @@ public class DataInitializer implements CommandLineRunner {
                 c.setCategory(community.getCategory());
                 c.setTags(community.getTags());
                 c.setCoverImage(community.getCoverImage());
-                c.setMemberCount(community.getMemberCount());
-                c.setHeatScore(community.getHeatScore());
                 c.setFeatured(community.getFeatured());
                 communityRepository.save(c);
                 updated++;

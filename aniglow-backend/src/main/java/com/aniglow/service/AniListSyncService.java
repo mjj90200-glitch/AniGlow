@@ -42,6 +42,7 @@ public class AniListSyncService {
                 media(type: ANIME, sort: POPULARITY_DESC, isAdult: false) {
                   id
                   title { romaji english native }
+                  synonyms
                   coverImage { extraLarge large }
                   description
                   meanScore
@@ -256,6 +257,15 @@ public class AniListSyncService {
         }
         if (!genres.isEmpty()) anime.setGenres(genres);
 
+        // 同义词（社区常补中文译名）并入搜索别名，辅助搜索与后续翻译
+        List<String> synonyms = new ArrayList<>();
+        for (JsonNode s : m.path("synonyms")) {
+            if (hasText(s.asText())) synonyms.add(s.asText().trim());
+        }
+        if (!synonyms.isEmpty()) {
+            anime.setSearchAliases(mergeAliases(anime.getSearchAliases(), synonyms));
+        }
+
         if (anime.getHasAgent() == null) anime.setHasAgent(false);
         anime.setSyncedAt(LocalDateTime.now());
 
@@ -389,6 +399,26 @@ public class AniListSyncService {
             case "CA" -> "加拿大";
             default -> null;
         };
+    }
+
+    /** 合并搜索别名：去重、保序、限长 */
+    private String mergeAliases(String existing, List<String> additions) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        if (hasText(existing)) {
+            for (String a : existing.split("[,，/、|]")) {
+                if (hasText(a)) merged.add(a.trim());
+            }
+        }
+        for (String a : additions) {
+            if (hasText(a)) merged.add(a);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String a : merged) {
+            if (sb.length() + a.length() + 1 > 1200) break;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(a);
+        }
+        return sb.toString();
     }
 
     private boolean hasText(String value) {

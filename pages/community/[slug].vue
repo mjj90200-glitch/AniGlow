@@ -27,8 +27,7 @@
                 <h1 class="text-xl sm:text-2xl font-extrabold text-white mb-1.5">{{ community.name }}</h1>
                 <p class="text-sm text-white/60 leading-6 line-clamp-2 mb-3">{{ community.description }}</p>
                 <div class="flex flex-wrap items-center gap-4 text-xs text-white/50">
-                  <span class="inline-flex items-center gap-1.5"><MessageCircle class="w-3.5 h-3.5" />{{ community.postCount || 0 }} 帖子</span>
-                  <span class="inline-flex items-center gap-1.5"><Users class="w-3.5 h-3.5" />{{ community.memberCount || 0 }} 成员</span>
+                  <span v-if="community.slug !== 'all'" class="inline-flex items-center gap-1.5"><Users class="w-3.5 h-3.5" />{{ community.memberCount || 0 }} 成员</span>
                   <span v-if="community.tags && community.tags.length" class="inline-flex items-center gap-1.5">
                     <span v-for="tag in community.tags.slice(0, 4)" :key="tag" class="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] text-white/70">{{ tag }}</span>
                   </span>
@@ -50,7 +49,7 @@
                 {{ item.label }}
               </button>
             </div>
-            <button class="btn-glow px-4 py-2 gap-1.5 text-[13px]" @click="openPostBox">
+            <button v-if="community.slug !== 'all'" class="btn-glow px-4 py-2 gap-1.5 text-[13px]" @click="openPostBox">
               <PenLine class="w-3.5 h-3.5" />
               发布
             </button>
@@ -63,6 +62,7 @@
               :key="post.id"
               :post="post"
               :community-slug="community.slug"
+              :show-community="community.slug === 'all'"
             />
           </div>
 
@@ -71,7 +71,8 @@
               <MessageCircle class="w-12 h-12 mx-auto text-gray-300 mb-4" />
               <h2 class="text-lg font-extrabold text-gray-400 mb-1.5">还没有帖子</h2>
               <p class="text-sm text-gray-400 mb-5">成为第一个点亮这个盒子的同好吧。</p>
-              <button class="btn-glow px-5 py-2.5 text-sm" @click="openPostBox">发布第一帖</button>
+              <button v-if="community.slug !== 'all'" class="btn-glow px-5 py-2.5 text-sm" @click="openPostBox">发布第一帖</button>
+              <NuxtLink v-else to="/community" class="btn-glow inline-flex px-5 py-2.5 text-sm">选择一个社区</NuxtLink>
             </div>
 
           <!-- 加载更多 -->
@@ -339,6 +340,10 @@ async function submitPost() {
 if (!isPostRoute.value) {
   await loadInitialPosts()
 }
+
+watch([slug, isPostRoute], ([, postRoute]) => {
+  if (!postRoute) void loadInitialPosts()
+})
 
 useHead(() => ({
   ...(isPostRoute.value

@@ -58,13 +58,13 @@
           <div class="flex flex-wrap items-center gap-3 mt-8">
             <button class="rounded-full bg-white/70 px-4 py-2 text-sm font-black text-gray-500 transition hover:text-sakura-dark hover:bg-sakura/15" @click="handleLikePost">
               <span class="inline-flex items-center gap-2">
-                <Heart class="w-4 h-4" :class="postLiked ? 'fill-sakura text-sakura' : ''" />
+                <Heart class="w-4 h-4" :class="post.likedByMe ? 'fill-sakura text-sakura' : ''" />
                 {{ post.likeCount || 0 }} 人点亮
               </span>
             </button>
             <span class="rounded-full bg-white/70 px-4 py-2 text-sm font-black text-gray-400 inline-flex items-center gap-2">
               <MessageCircle class="w-4 h-4" />
-              {{ replies.length }} 条回复
+              {{ post.replyCount || 0 }} 条回复
             </span>
             <span class="rounded-full bg-white/70 px-4 py-2 text-sm font-black text-gray-400 inline-flex items-center gap-2">
               <Eye class="w-4 h-4" />
@@ -165,7 +165,7 @@
                   class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold text-gray-500 transition hover:text-sakura-dark hover:bg-sakura/15"
                   @click="handleLikeReply(reply)"
                 >
-                  <Heart class="w-3.5 h-3.5" />
+                  <Heart class="w-3.5 h-3.5" :class="reply.likedByMe ? 'fill-sakura text-sakura' : ''" />
                   {{ reply.likeCount || 0 }} 人点亮
                 </button>
               </div>
@@ -244,7 +244,6 @@ const userStore = useUserStore()
 const draftReply = ref('')
 const replyError = ref('')
 const replying = ref(false)
-const postLiked = ref(false)
 
 const showPostDeleteConfirm = ref(false)
 const deletingPost = ref(false)
@@ -253,12 +252,12 @@ const deletingReply = ref(false)
 const lightboxOpen = ref(false)
 const lightboxIndex = ref(0)
 
-const { data: postData, refresh: refreshPost } = await useAsyncData(
+const { data: postData } = await useAsyncData(
   () => `community-post-${postId.value}`,
   () => fetchPost(postId.value),
   { server: true, watch: [postId] }
 )
-const { data: repliesData, refresh: refreshReplies } = await useAsyncData(
+const { data: repliesData } = await useAsyncData(
   () => `community-post-replies-${postId.value}`,
   () => fetchReplies(postId.value),
   { server: true, watch: [postId] }
@@ -282,10 +281,9 @@ function canDeleteReply(reply: CommunityReplyDto) {
 
 async function handleLikePost() {
   requireAuth(async () => {
-    if (!post.value || postLiked.value) return
+    if (!post.value) return
     try {
       postData.value = await likePost(post.value.id)
-      postLiked.value = true
     } catch {
       // Keep the UI calm
     }
@@ -298,9 +296,10 @@ async function submitReply() {
     replying.value = true
     replyError.value = ''
     try {
-      await createReply(post.value.id, draftReply.value.trim())
+      const created = await createReply(post.value.id, draftReply.value.trim())
       draftReply.value = ''
-      await Promise.all([refreshPost(), refreshReplies()])
+      repliesData.value = [...replies.value, created]
+      postData.value = { ...post.value, replyCount: (post.value.replyCount || 0) + 1 }
     } catch (e: any) {
       replyError.value = e?.message || '回复没有送达，请稍后再试'
     } finally {
@@ -340,9 +339,13 @@ async function confirmDeleteReply() {
   if (!deleteReplyTarget.value || deletingReply.value) return
   deletingReply.value = true
   try {
-    await deleteReply(deleteReplyTarget.value.id)
+    const deletedId = deleteReplyTarget.value.id
+    await deleteReply(deletedId)
+    repliesData.value = replies.value.filter(reply => reply.id !== deletedId)
+    if (post.value) {
+      postData.value = { ...post.value, replyCount: Math.max(0, (post.value.replyCount || 0) - 1) }
+    }
     deleteReplyTarget.value = null
-    await Promise.all([refreshPost(), refreshReplies()])
   } catch (e: any) {
     console.warn('删除回复失败:', e?.message)
     deleteReplyTarget.value = null

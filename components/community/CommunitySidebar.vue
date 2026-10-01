@@ -6,7 +6,7 @@
         <LayoutGrid class="w-5 h-5 text-firefly" />
         社区盒子
       </h2>
-      <p class="text-xs text-gray-400 font-bold mt-1">{{ totalCommunities }} 个盒子 · {{ totalPosts }} 条帖子</p>
+      <p class="text-xs text-gray-400 font-bold mt-1">{{ totalCommunities }} 个固定入口</p>
     </div>
 
     <!-- 社区列表 - 独立滚动 -->
@@ -43,7 +43,7 @@
                   {{ community.name }}
                 </p>
                 <p class="text-[11px] text-gray-400 font-bold mt-0.5">
-                  {{ community.postCount || 0 }} 帖 · {{ community.memberCount || 0 }} 同好
+                  {{ community.slug === 'all' ? '汇总全部社区' : `${community.memberCount || 0} 同好` }}
                 </p>
               </div>
               <span
@@ -87,5 +87,4 @@ const groupedCommunities = computed(() => {
 })
 
 const totalCommunities = computed(() => communities.value.length)
-const totalPosts = computed(() => communities.value.reduce((sum, c) => sum + (c.postCount || 0), 0))
 </script>

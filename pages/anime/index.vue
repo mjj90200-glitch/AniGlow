@@ -327,16 +327,36 @@ const TYPE_LABELS: Record<string, string> = {
   Music: '音乐',
 }
 
-// ── 筛选状态 ──
-const activeGenre = ref('')
-const activeType = ref('')
-const activeCountry = ref('')
-const activeYearFrom = ref<number | null>(null)
-const activeYearTo = ref<number | null>(null)
-const currentPage = ref(0)
+// ── 筛选状态（初始化自 URL，修改时同步回 URL，保证从详情页返回时恢复原状态） ──
+const activeGenre = ref(typeof route.query.genre === 'string' ? route.query.genre : '')
+const activeType = ref(typeof route.query.type === 'string' ? route.query.type : '')
+const activeCountry = ref(typeof route.query.country === 'string' ? route.query.country : '')
+const activeYearFrom = ref<number | null>(typeof route.query.yearFrom === 'string' && route.query.yearFrom ? Number(route.query.yearFrom) : null)
+const activeYearTo = ref<number | null>(typeof route.query.yearTo === 'string' && route.query.yearTo ? Number(route.query.yearTo) : null)
+const currentPage = ref(pageFromQuery())
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchInput = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const debouncedSearch = refDebounced(searchInput, 300)
+
+function pageFromQuery(): number {
+  const p = Number(route.query.page)
+  return Number.isFinite(p) && p > 0 ? p - 1 : 0
+}
+
+const router = useRouter()
+
+/** 筛选/页码变化时同步到 URL（replace 不产生历史记录垃圾） */
+watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYearFrom, activeYearTo, currentPage], () => {
+  const query: Record<string, string> = {}
+  if (debouncedSearch.value) query.q = debouncedSearch.value
+  if (activeGenre.value) query.genre = activeGenre.value
+  if (activeType.value) query.type = activeType.value
+  if (activeCountry.value) query.country = activeCountry.value
+  if (activeYearFrom.value !== null) query.yearFrom = String(activeYearFrom.value)
+  if (activeYearTo.value !== null) query.yearTo = String(activeYearTo.value)
+  if (currentPage.value > 0) query.page = String(currentPage.value + 1)
+  router.replace({ query })
+})
 
 // ── 年份芯片：近年逐年份 + 更早按年代区间（与 B 站一致） ──
 const YEAR_RANGES: { label: string; from: number | null; to: number }[] = [

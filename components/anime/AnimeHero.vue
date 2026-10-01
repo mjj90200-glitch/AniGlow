@@ -5,9 +5,9 @@
       <div class="absolute inset-0 bg-gradient-to-b from-cream/35 via-cream/80 to-cream" />
     </div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <NuxtLink to="/anime" class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/70 backdrop-blur-md text-sm font-bold text-gray-600 shadow-soft hover:text-firefly-700 transition-colors">
+      <button type="button" class="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-white/70 backdrop-blur-md text-sm font-bold text-gray-600 shadow-soft hover:text-firefly-700 transition-colors" @click="goBackToList">
         <ArrowLeft class="w-4 h-4" />返回番剧
-      </NuxtLink>
+      </button>
       <div class="grid lg:grid-cols-[280px,1fr] gap-8 lg:gap-10 items-end">
         <div class="glass-card rounded-[2rem] p-3">
           <img :src="anime.coverImage" :alt="displayTitle(anime)" class="w-full aspect-[3/4] object-cover rounded-[1.45rem] shadow-ambient" />
@@ -37,6 +37,14 @@
 import { ArrowLeft } from 'lucide-vue-next'
 import type { AnimeDto } from '~/types/anime'
 import { displayTitle, tagClass, tStatus, tType } from '~/composables/useAnimeI18n'
+
+const router = useRouter()
+
+/** 返回列表时走浏览器历史，保留筛选与页码状态（如 ?page=5）；无历史则回列表首页 */
+function goBackToList() {
+  if (window.history.length > 1) router.back()
+  else navigateTo('/anime')
+}
 
 const props = defineProps<{
   anime: AnimeDto

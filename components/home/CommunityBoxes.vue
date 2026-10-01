@@ -11,8 +11,7 @@
       <h3 class="font-extrabold text-gray-800 text-sm mb-1.5 line-clamp-1 group-hover:text-firefly-600 transition-colors">{{ box.name }}</h3>
       <p class="text-xs text-gray-400 leading-relaxed line-clamp-2 mb-3">{{ box.description }}</p>
       <div class="flex items-center gap-4 text-xs text-gray-400">
-        <span class="inline-flex items-center gap-1"><MessageCircle class="w-3.5 h-3.5" />{{ box.postCount }}</span>
-        <span class="inline-flex items-center gap-1"><Users class="w-3.5 h-3.5" />{{ box.memberCount }}</span>
+        <span v-if="box.slug !== 'all'" class="inline-flex items-center gap-1"><Users class="w-3.5 h-3.5" />{{ box.memberCount }}</span>
       </div>
     </NuxtLink>
   </div>
@@ -20,6 +19,6 @@
 </template>
 
 <script setup lang="ts">
-import { MessageCircle, Users } from 'lucide-vue-next'
+import { Users } from 'lucide-vue-next'
 defineProps<{ loading: boolean; communities: any[] }>()
 </script>

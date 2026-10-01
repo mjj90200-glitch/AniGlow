@@ -20,7 +20,8 @@ public class CommunityPostRequest {
     @Size(max = 500)
     private String coverImage;
 
-    private List<String> images;
+    @Size(max = 9, message = "每篇帖子最多上传 9 张图片")
+    private List<@Size(max = 500, message = "图片地址不能超过 500 字") String> images;
 
     @Size(max = 80)
     private String displayName;

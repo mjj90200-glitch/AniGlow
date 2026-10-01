@@ -85,8 +85,8 @@ class ApiIntegrationTest {
                 .build());
 
         savedCommunity = communityRepository.save(Community.builder()
-                .slug("anime-chat")
-                .name("动漫闲聊")
+                .slug("anime")
+                .name("番剧社区")
                 .description("畅聊一切动漫相关")
                 .category("General")
                 .tags("闲聊,讨论,推荐")
@@ -269,9 +269,9 @@ class ApiIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data.length()").value(1))
-                    .andExpect(jsonPath("$.data[0].slug").value("anime-chat"))
-                    .andExpect(jsonPath("$.data[0].name").value("动漫闲聊"));
+                    .andExpect(jsonPath("$.data.length()").value(2))
+                    .andExpect(jsonPath("$.data[0].slug").value("all"))
+                    .andExpect(jsonPath("$.data[1].slug").value("anime"));
         }
     }
 
@@ -282,10 +282,10 @@ class ApiIntegrationTest {
         @Test
         @DisplayName("返回社区详细信息")
         void returnsCommunityDetail() throws Exception {
-            mockMvc.perform(get("/communities/{slug}", "anime-chat"))
+            mockMvc.perform(get("/communities/{slug}", "anime"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.slug").value("anime-chat"))
+                    .andExpect(jsonPath("$.data.slug").value("anime"))
                     .andExpect(jsonPath("$.data.description").value("畅聊一切动漫相关"))
                     .andExpect(jsonPath("$.data.tags").isArray());
         }
@@ -297,6 +297,15 @@ class ApiIntegrationTest {
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.success").value(false));
         }
+
+        @Test
+        @DisplayName("全部帖子入口返回虚拟聚合社区")
+        void allCommunityReturnsVirtualCommunity() throws Exception {
+            mockMvc.perform(get("/communities/{slug}", "all"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.slug").value("all"))
+                    .andExpect(jsonPath("$.data.name").value("全部帖子"));
+        }
     }
 
     @Nested
@@ -306,10 +315,19 @@ class ApiIntegrationTest {
         @Test
         @DisplayName("返回帖子分页")
         void returnsCommunityPosts() throws Exception {
-            mockMvc.perform(get("/communities/{slug}/posts", "anime-chat"))
+            mockMvc.perform(get("/communities/{slug}/posts", "anime"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.items").isArray());
+        }
+
+        @Test
+        @DisplayName("全部帖子入口返回跨社区分页")
+        void returnsAllCommunityPosts() throws Exception {
+            mockMvc.perform(get("/communities/{slug}/posts", "all"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.items").isArray())
+                    .andExpect(jsonPath("$.data.total").value(0));
         }
     }
 
@@ -320,7 +338,7 @@ class ApiIntegrationTest {
         @Test
         @DisplayName("未登录 → 401")
         void unauthenticatedReturns401() throws Exception {
-            mockMvc.perform(post("/communities/{slug}/posts", "anime-chat")
+            mockMvc.perform(post("/communities/{slug}/posts", "anime")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"title": "测试帖", "content": "测试内容"}

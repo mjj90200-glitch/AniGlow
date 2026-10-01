@@ -73,7 +73,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return new Rule("auth-set-credentials", 5);
         }
         if ("/communities/upload/images".equals(path)) {
-            return new Rule("community-upload", 5);
+            // 前端允许一篇帖子逐张上传最多 9 张图，需给一次完整发帖留出余量。
+            return new Rule("community-upload", 20);
         }
         if (path.startsWith("/communities/")) {
             return new Rule("community-write", 10);

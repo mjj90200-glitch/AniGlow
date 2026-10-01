@@ -21,6 +21,7 @@ public class CommunityReplyDto {
     private String avatarUrl;
     private String content;
     private Long likeCount;
+    private Boolean likedByMe;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

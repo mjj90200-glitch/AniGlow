@@ -76,8 +76,10 @@ public class CommunityController {
     }
 
     @GetMapping("/posts/{postId}")
-    public ResponseEntity<ApiResponse<CommunityPostDto>> getPost(@PathVariable Long postId) {
-        return ok(communityService.getPost(postId));
+    public ResponseEntity<ApiResponse<CommunityPostDto>> getPost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ok(communityService.getPost(postId, userDetails == null ? null : userDetails.getId()));
     }
 
     @DeleteMapping("/posts/{postId}")
@@ -90,16 +92,20 @@ public class CommunityController {
 
     @PostMapping("/posts/{postId}/like")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<CommunityPostDto>> likePost(@PathVariable Long postId) {
-        return ResponseEntity.ok(ApiResponse.success("已点亮", communityService.likePost(postId)));
+    public ResponseEntity<ApiResponse<CommunityPostDto>> likePost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        CommunityPostDto result = communityService.likePost(postId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.success(Boolean.TRUE.equals(result.getLikedByMe()) ? "已点亮" : "已取消点亮", result));
     }
 
     @GetMapping("/posts/{postId}/replies")
     public ResponseEntity<ApiResponse<List<CommunityReplyDto>>> listReplies(
             @PathVariable Long postId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return ok(communityService.listReplies(postId, page, size));
+        return ok(communityService.listReplies(postId, userDetails == null ? null : userDetails.getId(), page, size));
     }
 
     @PostMapping("/posts/{postId}/replies")
@@ -122,8 +128,11 @@ public class CommunityController {
 
     @PostMapping("/replies/{replyId}/like")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<CommunityReplyDto>> likeReply(@PathVariable Long replyId) {
-        return ResponseEntity.ok(ApiResponse.success("已点亮", communityService.likeReply(replyId)));
+    public ResponseEntity<ApiResponse<CommunityReplyDto>> likeReply(
+            @PathVariable Long replyId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        CommunityReplyDto result = communityService.likeReply(replyId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.success(Boolean.TRUE.equals(result.getLikedByMe()) ? "已点亮" : "已取消点亮", result));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> ok(T data) {

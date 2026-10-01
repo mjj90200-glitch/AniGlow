@@ -30,6 +30,7 @@ export interface CommunityPostDto {
   coverImage?: string
   images?: string[]
   likeCount: number
+  likedByMe?: boolean
   replyCount: number
   viewCount: number
   pinned: boolean
@@ -48,6 +49,7 @@ export interface CommunityReplyDto {
   avatarUrl?: string
   content: string
   likeCount: number
+  likedByMe?: boolean
   createdAt: string
   updatedAt?: string
 }

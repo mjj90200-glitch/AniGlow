@@ -27,6 +27,7 @@ public class CommunityPostDto {
     private String coverImage;
     private List<String> images;
     private Long likeCount;
+    private Boolean likedByMe;
     private Long replyCount;
     private Long viewCount;
     private Boolean pinned;

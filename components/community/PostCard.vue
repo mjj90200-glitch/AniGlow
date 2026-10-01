@@ -19,7 +19,10 @@
           <span v-else class="text-sm font-extrabold text-firefly-700">{{ authorName.slice(0, 1) }}</span>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-bold text-gray-800 truncate">{{ authorName }}</p>
+          <p class="text-sm font-bold text-gray-800 truncate">
+            {{ authorName }}
+            <span v-if="showCommunity" class="ml-2 text-[11px] font-semibold text-firefly-700">{{ post.communityName }}</span>
+          </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <span v-if="post.pinned" class="rounded-full bg-sakura/10 px-1.5 py-0.5 text-[10px] font-extrabold text-sakura-dark">置顶</span>
@@ -38,73 +41,28 @@
         {{ post.content }}
       </p>
 
-      <!-- 自适应图片网格 -->
+      <!-- 保留原始宽高比：不设固定高度、不裁切图片 -->
       <div v-if="imageUrls.length" class="mb-3 overflow-hidden">
-        <!-- 1张图：限制宽度 -->
-        <div v-if="imageUrls.length === 1" class="max-w-[72%] sm:max-w-[55%]">
-          <div class="rounded-lg overflow-hidden bg-gray-100">
-            <img
-              :src="imageUrls[0]"
-              class="w-full h-auto max-h-[200px] sm:max-h-[300px] object-cover"
-              loading="lazy"
-              alt=""
-            />
-          </div>
+        <div v-if="imageUrls.length === 1" class="max-w-[82%] sm:max-w-[62%]">
+          <img
+            :src="imageUrls[0]"
+            class="block w-full h-auto rounded-xl bg-gray-50"
+            loading="lazy"
+            :alt="`${post.title} 配图 1`"
+          />
         </div>
-
-        <!-- 2张图：并排 -->
-        <div v-else-if="imageUrls.length === 2" class="grid grid-cols-2 gap-[3px] h-[150px] sm:h-[230px]">
-          <div class="overflow-hidden rounded-l-lg bg-gray-100">
-            <img :src="imageUrls[0]" class="w-full h-full object-cover" loading="lazy" alt="" />
-          </div>
-          <div class="overflow-hidden rounded-r-lg bg-gray-100">
-            <img :src="imageUrls[1]" class="w-full h-full object-cover" loading="lazy" alt="" />
-          </div>
-        </div>
-
-        <!-- 3张图：左大 + 右二 -->
-        <div v-else-if="imageUrls.length === 3" class="flex gap-[3px] h-[180px] sm:h-[260px]">
-          <div class="flex-[55%] rounded-l-lg overflow-hidden bg-gray-100">
-            <img :src="imageUrls[0]" class="w-full h-full object-cover" loading="lazy" alt="" />
-          </div>
-          <div class="flex-[45%] flex flex-col gap-[3px]">
-            <div class="flex-1 overflow-hidden bg-gray-100">
-              <img :src="imageUrls[1]" class="w-full h-full object-cover" loading="lazy" alt="" />
-            </div>
-            <div class="flex-1 rounded-br-lg overflow-hidden bg-gray-100">
-              <img :src="imageUrls[2]" class="w-full h-full object-cover" loading="lazy" alt="" />
-            </div>
-          </div>
-        </div>
-
-        <!-- 4张图：2×2 网格 -->
-        <div v-else-if="imageUrls.length === 4" class="grid grid-cols-2 gap-[3px] h-[200px] sm:h-[280px]">
-          <div v-for="(url, i) in imageUrls" :key="i" class="overflow-hidden bg-gray-100"
-               :class="{
-                 'rounded-tl-lg': i === 0,
-                 'rounded-tr-lg': i === 1,
-                 'rounded-bl-lg': i === 2,
-                 'rounded-br-lg': i === 3,
-               }">
-            <img :src="url" class="w-full h-full object-cover" loading="lazy" alt="" />
-          </div>
-        </div>
-
-        <!-- 5-9张图：3列网格 -->
-        <div v-else class="grid grid-cols-3 gap-[3px] max-w-[90%] sm:max-w-[80%]">
+        <div v-else class="columns-2 sm:columns-3 gap-2 max-w-full sm:max-w-[86%]">
           <div
             v-for="(url, i) in displayedImages"
             :key="i"
-            class="aspect-square overflow-hidden bg-gray-100 relative"
-            :class="gridCornerClass(i, displayedImages.length)"
+            class="mb-2 break-inside-avoid overflow-hidden rounded-xl bg-gray-50"
           >
-            <img :src="url" class="w-full h-full object-cover" loading="lazy" alt="" />
-            <div
-              v-if="i === 8 && imageUrls.length > 9"
-              class="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm sm:text-base font-extrabold"
-            >
-              +{{ imageUrls.length - 9 }}
-            </div>
+            <img
+              :src="url"
+              class="block w-full h-auto"
+              loading="lazy"
+              :alt="`${post.title} 配图 ${i + 1}`"
+            />
           </div>
         </div>
       </div>
@@ -135,6 +93,7 @@ import type { CommunityPostDto } from '~/composables/useCommunity'
 const props = defineProps<{
   post: CommunityPostDto
   communitySlug: string
+  showCommunity?: boolean
 }>()
 
 const imageUrls = computed(() => props.post.images ?? [])
@@ -147,29 +106,6 @@ const authorName = computed(() => {
   if (props.post.username && !/^1\d{10}$/.test(props.post.username)) return props.post.username
   return '番舍同好'
 })
-
-function gridCornerClass(index: number, total: number): string {
-  const classes: string[] = []
-  const cols = 3
-  const rows = Math.ceil(total / cols)
-  const row = Math.floor(index / cols)
-  const col = index % cols
-
-  if (row === 0 && col === 0) classes.push('rounded-tl-lg')
-  if (row === 0 && col === cols - 1) classes.push('rounded-tr-lg')
-  // last col of last row (might not be full row)
-  if (row === rows - 1 && col === 0 && total % cols === 1) {
-    // single item in last row: both bottom corners
-    classes.push('rounded-bl-lg', 'rounded-br-lg')
-  } else if (row === rows - 1 && col === 0) {
-    classes.push('rounded-bl-lg')
-  }
-  if (row === rows - 1 && col === (total - 1) % cols) {
-    classes.push('rounded-br-lg')
-  }
-
-  return classes.join(' ')
-}
 
 function formatTime(value?: string): string {
   if (!value) return '刚刚'

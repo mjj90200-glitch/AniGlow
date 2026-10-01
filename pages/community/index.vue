@@ -15,7 +15,7 @@
               <MessageCircle class="w-10 h-10 text-firefly/50" />
             </div>
             <h2 class="text-xl font-extrabold text-gray-500 mb-2">萤火社区</h2>
-            <p class="text-sm text-gray-400 leading-relaxed">番剧、漫画、游戏、Vibe Coding — 四个盒子，四群同好。<br/>从左侧选择一个社区，开始聊吧。</p>
+            <p class="text-sm text-gray-400 leading-relaxed">六个固定主题社区，加上一个全站帖子广场。<br/>从左侧选择一个入口，开始聊吧。</p>
           </div>
         </div>
 
@@ -73,11 +73,7 @@
 
               <!-- 统计 -->
               <div class="flex items-center gap-4 text-xs text-gray-400">
-                <span class="inline-flex items-center gap-1">
-                  <MessageCircle class="w-3.5 h-3.5" />
-                  {{ box.postCount || 0 }}
-                </span>
-                <span class="inline-flex items-center gap-1">
+                <span v-if="box.slug !== 'all'" class="inline-flex items-center gap-1">
                   <Users class="w-3.5 h-3.5" />
                   {{ box.memberCount || 0 }}
                 </span>
