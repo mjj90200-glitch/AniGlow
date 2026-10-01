@@ -582,14 +582,13 @@ onBeforeRouteLeave(() => {
   box-shadow: 0 16px 34px rgba(0, 170, 68, 0.12);
 }
 
-.filter-chip-active {
+/* 双类名提升优先级：激活的绿色必须压过 .filter-chip 的白底（后者源码顺序在后） */
+.filter-chip.category-chip-active {
   border-color: rgba(0, 230, 118, 0.45);
   background: linear-gradient(135deg, rgba(0, 230, 118, 0.92), rgba(134, 239, 172, 0.82));
   color: #ffffff;
   box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
 }
-
-
 
 /* ── 分页按钮 ───────────────────────────────────── */
 
