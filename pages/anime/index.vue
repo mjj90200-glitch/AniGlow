@@ -394,7 +394,7 @@ const hasActiveFilter = computed(() =>
 
 function goToPage(page: number) {
   currentPage.value = Math.max(0, Math.min(page, totalPages.value - 1))
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: 'auto' })
 }
 
 // ═══════ 筛选选项集 ═══════
