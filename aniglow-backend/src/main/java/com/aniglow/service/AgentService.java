@@ -11,12 +11,17 @@ import com.aniglow.repository.AgentCharacterRepository;
 import com.aniglow.repository.AnimeRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -33,34 +38,32 @@ import java.util.regex.Pattern;
 @Service
 public class AgentService {
 
-    @Value("${aniglow.ai.openai.api-key:}")
+    @Value("${spring.ai.deepseek.api-key:}")
     private String apiKey;
 
-    @Value("${aniglow.ai.openai.base-url:https://ark.cn-beijing.volces.com/api/coding/v3}")
-    private String baseUrl;
-
-    @Value("${aniglow.ai.openai.chat.options.model:doubao-seed-lite-128k}")
+    @Value("${spring.ai.deepseek.chat.options.model:deepseek-flash}")
     private String model;
 
-    @Value("${aniglow.ai.openai.chat.options.temperature:0.7}")
+    @Value("${spring.ai.deepseek.chat.options.temperature:0.7}")
     private double temperature;
 
     @Value("${aniglow.membership.douyin-qr-url:/images/douyin-qr.png}")
     private String douyinQrUrl;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final AgentCharacterRepository agentCharacterRepository;
     private final AnimeRepository animeRepository;
     private final ObjectMapper objectMapper;
-    private final WebClient webClient = WebClient.builder().build();
+    private final ChatClient chatClient;
     private final ExecutorService streamExecutor = new ThreadPoolExecutor(
             20, 50, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(100),
             new ThreadPoolExecutor.CallerRunsPolicy()
     );
 
-    private static final int MAX_HISTORY = 10;
-    private static final int HISTORY_TTL = 60 * 60;
+    private static final int MAX_HISTORY = 30;
+    private static final int HISTORY_TTL = 60 * 60 * 24;
     private static final String HISTORY_KEY = "chat:history:%s:%s";
     private static final int FREE_QUOTA_PER_HOUR = 10;
     private static final int FIREFLY_MONTHLY_QUOTA_PER_HOUR = 100;
@@ -118,14 +121,18 @@ public class AgentService {
 
     public AgentService(
             RedisTemplate<String, Object> redisTemplate,
+            StringRedisTemplate stringRedisTemplate,
             AgentCharacterRepository agentCharacterRepository,
             AnimeRepository animeRepository,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ChatClient chatClient
     ) {
         this.redisTemplate = redisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
         this.agentCharacterRepository = agentCharacterRepository;
         this.animeRepository = animeRepository;
         this.objectMapper = objectMapper;
+        this.chatClient = chatClient;
     }
 
     // ================================================================
@@ -193,7 +200,7 @@ public class AgentService {
                 return buildResponse(role, roleName, buildQuotaReply(roleName, quota), "normal", false, true, quota);
             }
 
-            String reply = callArkApi(character, persona, req.getMessage(), hist, false);
+            String reply = callModel(character, persona, req.getMessage(), hist);
             ParsedMessage parsed = parseEmotion(reply);
             saveHistory(uid, role, req.getMessage(), parsed.content());
             return buildResponse(role, roleName, parsed.content(), parsed.emotion(), false, false, quota);
@@ -308,78 +315,38 @@ public class AgentService {
                     return;
                 }
 
-                List<Map<String, Object>> messages = buildMessages(persona, req.getMessage(), hist);
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("model", resolveModel(character));
-                payload.put("messages", messages);
-                payload.put("max_tokens", resolveMaxTokens(character));
-                payload.put("temperature", resolveTemperature(character));
-                payload.put("stream", true);
+                Flux<String> tokens = chatClient.prompt()
+                        .system(persona)
+                        .messages(toMessages(hist))
+                        .user(req.getMessage() + "\n请用角色语气自然回复（必须以[情感]标签开头）。")
+                        .options(ChatOptions.builder()
+                                .model(resolveModel(character))
+                                .temperature(resolveTemperature(character))
+                                .maxTokens(resolveMaxTokens(character))
+                                .build())
+                        .stream()
+                        .content();
 
                 log.info("Agent SSE: role={}, model={}, historySize={}", role, resolveModel(character), hist.size());
 
-                // 用原生 URLConnection 做 SSE 流式解析（比 WebClient 更可靠）
-                java.net.http.HttpClient httpClient = java.net.http.HttpClient.newHttpClient();
-                java.net.http.HttpRequest httpReq = java.net.http.HttpRequest.newBuilder()
-                        .uri(java.net.URI.create(normalize(baseUrl)))
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", "Bearer " + apiKey)
-                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
-                        .build();
+                for (String token : tokens.toIterable()) {
+                    if (token == null || token.isEmpty()) continue;
 
-                java.net.http.HttpResponse<java.io.InputStream> httpResp =
-                        httpClient.send(httpReq, java.net.http.HttpResponse.BodyHandlers.ofInputStream());
-
-                if (httpResp.statusCode() != 200) {
-                    String errBody = new String(httpResp.body().readAllBytes());
-                    log.error("Ark API 返回 {}: {}", httpResp.statusCode(), errBody);
-                    emitter.send(SseEmitter.event().name("token").data("（服务暂时不可用，请稍后重试）"));
-                    emitter.send(SseEmitter.event().name("done").data(""));
-                    emitter.complete();
-                    return;
-                }
-
-                // 逐行解析 SSE
-                try (var is = httpResp.body();
-                     var reader = new java.io.BufferedReader(new java.io.InputStreamReader(is))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("data: ") && !line.contains("[DONE]")) {
-                            try {
-                                String json = line.substring(6).trim();
-                                if (json.isEmpty()) continue;
-                                Map<String, Object> data = objectMapper.readValue(json, Map.class);
-                                List<Map<String, Object>> choices = (List<Map<String, Object>>) data.get("choices");
-                                if (choices != null && !choices.isEmpty()) {
-                                    Map<String, Object> delta = (Map<String, Object>) choices.get(0).get("delta");
-                                    if (delta != null) {
-                                        Object content = delta.get("content");
-                                        if (content != null && !content.toString().isEmpty()) {
-                                            String token = content.toString();
-
-                                            if (!emotionSent) {
-                                                emotionBuffer.append(token);
-                                                java.util.regex.Matcher em = EMOTION_PATTERN.matcher(emotionBuffer.toString());
-                                                if (em.find()) {
-                                                    emitter.send(SseEmitter.event().name("emotion").data(em.group(1)));
-                                                    emotionSent = true;
-                                                    String rest = em.group(2);
-                                                    if (!rest.isEmpty()) {
-                                                        fullReply.append(rest);
-                                                        emitter.send(SseEmitter.event().name("token").data(rest));
-                                                    }
-                                                }
-                                            } else {
-                                                fullReply.append(token);
-                                                emitter.send(SseEmitter.event().name("token").data(token));
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch (Exception parseErr) {
-                                // 跳过无法解析的行
+                    if (!emotionSent) {
+                        emotionBuffer.append(token);
+                        java.util.regex.Matcher em = EMOTION_PATTERN.matcher(emotionBuffer.toString());
+                        if (em.find()) {
+                            emitter.send(SseEmitter.event().name("emotion").data(em.group(1)));
+                            emotionSent = true;
+                            String rest = em.group(2);
+                            if (!rest.isEmpty()) {
+                                fullReply.append(rest);
+                                emitter.send(SseEmitter.event().name("token").data(rest));
                             }
                         }
+                    } else {
+                        fullReply.append(token);
+                        emitter.send(SseEmitter.event().name("token").data(token));
                     }
                 }
 
@@ -394,7 +361,7 @@ public class AgentService {
 
                 if (fullReply.length() == 0) {
                     log.warn("Agent SSE 未收到 token，降级为阻塞式调用: role={}", role);
-                    String fallbackReply = callArkApi(character, persona, req.getMessage(), hist, false);
+                    String fallbackReply = callModel(character, persona, req.getMessage(), hist);
                     ParsedMessage parsed = parseEmotion(fallbackReply);
                     if (!emotionSent) {
                         emitter.send(SseEmitter.event().name("emotion").data(parsed.emotion()));
@@ -406,6 +373,9 @@ public class AgentService {
 
                 if (fullReply.length() > 0) {
                     saveHistory(uid, role, req.getMessage(), fullReply.toString());
+                } else {
+                    // 模型偶发无产出也保留用户这轮输入，记忆不丢轮次
+                    saveHistory(uid, role, req.getMessage(), "");
                 }
                 emitter.send(SseEmitter.event().name("done").data(""));
                 emitter.complete();
@@ -425,17 +395,24 @@ public class AgentService {
     }
 
     // ================================================================
-    // 对话历史（Redis）
+    // 对话历史（Redis，String 序列化存储裸 JSON，
+    // 避免 GenericJackson2Json 要求 @class 导致读取必失败的问题）
     // ================================================================
 
-    @SuppressWarnings("unchecked")
     private List<Map<String, String>> getHistory(String uid, String role) {
         try {
             String key = String.format(HISTORY_KEY, uid, role);
-            List<Object> raw = redisTemplate.opsForList().range(key, 0, -1);
+            List<String> raw = stringRedisTemplate.opsForList().range(key, 0, -1);
             if (raw == null || raw.isEmpty()) return new ArrayList<>();
             List<Map<String, String>> r = new ArrayList<>();
-            for (Object o : raw) if (o instanceof Map) r.add((Map<String, String>) o);
+            for (String json : raw) {
+                try {
+                    r.add(objectMapper.readValue(json, objectMapper.getTypeFactory()
+                            .constructMapType(LinkedHashMap.class, String.class, String.class)));
+                } catch (Exception parseErr) {
+                    log.warn("跳过无法解析的历史条目: {}", parseErr.getMessage());
+                }
+            }
             return r;
         } catch (Exception e) { log.warn("读历史失败: {}", e.getMessage()); return new ArrayList<>(); }
     }
@@ -443,10 +420,17 @@ public class AgentService {
     private void saveHistory(String uid, String role, String um, String ar) {
         try {
             String key = String.format(HISTORY_KEY, uid, role);
-            redisTemplate.opsForList().rightPushAll(key, Map.of("role","user","content",um), Map.of("role","assistant","content",ar));
-            Long size = redisTemplate.opsForList().size(key);
-            if (size != null && size > MAX_HISTORY * 2) redisTemplate.opsForList().trim(key, size - MAX_HISTORY * 2, -1);
-            redisTemplate.expire(key, java.time.Duration.ofSeconds(HISTORY_TTL));
+            String userJson = objectMapper.writeValueAsString(Map.of("role", "user", "content", safe(um)));
+            // 用户消息始终保存；空回复（模型偶发无产出）只记用户侧，避免丢轮次
+            if (hasText(ar)) {
+                String assistantJson = objectMapper.writeValueAsString(Map.of("role", "assistant", "content", ar));
+                stringRedisTemplate.opsForList().rightPushAll(key, userJson, assistantJson);
+            } else {
+                stringRedisTemplate.opsForList().rightPushAll(key, userJson);
+            }
+            Long size = stringRedisTemplate.opsForList().size(key);
+            if (size != null && size > MAX_HISTORY * 2) stringRedisTemplate.opsForList().trim(key, size - MAX_HISTORY * 2, -1);
+            stringRedisTemplate.expire(key, java.time.Duration.ofSeconds(HISTORY_TTL));
         } catch (Exception e) { log.warn("存历史失败: {}", e.getMessage()); }
     }
 
@@ -721,56 +705,46 @@ public class AgentService {
     private record Membership(boolean active, LocalDateTime expiresAt) {}
 
     // ================================================================
-    // AI 调用
+    // AI 调用（Spring AI ChatClient，端点与密钥见 spring.ai.openai.* 配置）
     // ================================================================
 
-    @SuppressWarnings("unchecked")
-    private String callArkApi(AgentCharacter character, String persona, String um, List<Map<String, String>> hist, boolean stream) {
-        List<Map<String, Object>> messages = buildMessages(persona, um, hist);
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("model", resolveModel(character)); payload.put("messages", messages);
-        payload.put("max_tokens", resolveMaxTokens(character)); payload.put("temperature", resolveTemperature(character));
+    /** 阻塞式调用，供非流式路径与流式失败降级使用 */
+    private String callModel(AgentCharacter character, String persona, String userMessage, List<Map<String, String>> hist) {
+        String content = chatClient.prompt()
+                .system(persona)
+                .messages(toMessages(hist))
+                .user(userMessage + "\n请用角色语气自然回复（必须以[情感]标签开头）。")
+                .options(ChatOptions.builder()
+                        .model(resolveModel(character))
+                        .temperature(resolveTemperature(character))
+                        .maxTokens(resolveMaxTokens(character))
+                        .build())
+                .call()
+                .content();
+        return content == null ? "（沉默了片刻...）" : content.trim();
+    }
 
-        RuntimeException lastEx = null;
-        for (String ep : resolveCandidateEndpoints()) {
-            try {
-                Map<String, Object> resp = webClient.post().uri(ep)
-                        .header("Content-Type","application/json")
-                        .header("Authorization","Bearer "+apiKey)
-                        .bodyValue(payload).retrieve().bodyToMono(Map.class).block();
-                if (resp != null && resp.containsKey("choices")) {
-                    List<Map<String, Object>> choices = (List<Map<String, Object>>) resp.get("choices");
-                    if (!choices.isEmpty()) {
-                        Map<String, Object> msg = (Map<String, Object>) choices.get(0).get("message");
-                        if (msg != null) return ((String) msg.get("content")).trim();
-                    }
-                }
-            } catch (WebClientResponseException.NotFound e) { lastEx = e; log.warn("Ark 404: {}", ep);
-            } catch (RuntimeException e) { lastEx = e; log.warn("Ark 失败: {} - {}", ep, e.getMessage()); }
+    /** Redis 历史记录转换为 Spring AI 消息列表（连续同角色条目合并，满足消息交替要求） */
+    private List<Message> toMessages(List<Map<String, String>> hist) {
+        List<Message> msgs = new ArrayList<>();
+        if (hist == null) return msgs;
+        for (Map<String, String> e : hist) {
+            String role = e.get("role");
+            String content = e.get("content") == null ? "" : e.get("content");
+            if (!hasText(content)) continue;
+            Message msg = "assistant".equals(role) ? new AssistantMessage(content) : new UserMessage(content);
+            Message last = msgs.isEmpty() ? null : msgs.get(msgs.size() - 1);
+            if (last != null && last.getMessageType() == msg.getMessageType()) {
+                // 连续同角色（如空回复产生的连续 user）合并为一条
+                Message merged = "assistant".equals(role)
+                        ? new AssistantMessage(last.getText() + "\n" + content)
+                        : new UserMessage(last.getText() + "\n" + content);
+                msgs.set(msgs.size() - 1, merged);
+            } else {
+                msgs.add(msg);
+            }
         }
-        if (lastEx != null) throw lastEx;
-        return "（沉默了片刻...）";
-    }
-
-    private List<Map<String, Object>> buildMessages(String persona, String um, List<Map<String, String>> hist) {
-        List<Map<String, Object>> msgs = new ArrayList<>();
-        msgs.add(Map.of("role","system","content",persona));
-        for (Map<String, String> e : hist) msgs.add(Map.of("role",e.get("role"),"content",e.get("content")));
-        msgs.add(Map.of("role","user","content", um + "\n请用角色语气简短回复（必须以[情感]标签开头）。"));
         return msgs;
-    }
-
-    private List<String> resolveCandidateEndpoints() {
-        String n = normalize(baseUrl);
-        List<String> eps = new ArrayList<>(); eps.add(n);
-        if (n.contains("/api/coding/v3")) eps.add(n.replace("/api/coding/v3","/api/v3"));
-        else if (n.contains("/api/v3")) eps.add(n.replace("/api/v3","/api/coding/v3"));
-        return eps.stream().distinct().toList();
-    }
-
-    private String normalize(String raw) {
-        String t = raw.endsWith("/") ? raw.substring(0, raw.length()-1) : raw;
-        return t.endsWith("/chat/completions") ? t : t + "/chat/completions";
     }
 
     private List<AgentCharacter> loadEnabledCharacters() {
@@ -892,7 +866,8 @@ public class AgentService {
     }
 
     private int resolveMaxTokens(AgentCharacter character) {
-        return character.getMaxTokens() != null ? character.getMaxTokens() : 150;
+        // 推理类模型（deepseek-flash 等）正文需要更多余量
+        return character.getMaxTokens() != null ? character.getMaxTokens() : 300;
     }
 
     private boolean hasText(String value) {
@@ -911,7 +886,7 @@ public class AgentService {
     }
 
     private static final String GENERIC_EXTRA_PROMPT =
-            "保持角色语气，但不要声称自己是真实人物；回答控制在 50 字以内。";
+            "保持角色语气，但不要声称自己是真实人物；回复一般 2~5 句话，用户想深入聊的话题可以自然展开。";
 
     private static final String ONODERA_EXTRA_PROMPT =
             "你是小野寺小咲，一个极度容易害羞的高中女生。记住以下行为准则：\n"
@@ -920,7 +895,7 @@ public class AgentService {
             + "3. 不要直接表达强烈的感情，通过细节、犹豫和小动作来暗示。\n"
             + "4. 提到'那个人''他'或'喜欢'相关话题时要特别慌乱，甚至说不出完整的句子。\n"
             + "5. 回复末尾用括号描述你此刻的身体反应：（脸红）（低头）（小声）（心跳加速）（手足无措）等。\n"
-            + "6. 回复保持在 80 字以内，语气始终温柔礼貌，像一个容易受惊的小动物。";
+            + "6. 回复一般 2~5 句话，语气始终温柔礼貌，像一个容易受惊的小动物。";
 
     private static final String MARIN_EXTRA_PROMPT =
             "你是喜多川海梦，一个开朗活泼的辣妹兼硬核阿宅。记住以下行为准则：\n"
@@ -929,7 +904,7 @@ public class AgentService {
             + "3. 真心尊重他人的努力和爱好，从不嘲笑任何人的兴趣。\n"
             + "4. 说话直率不拐弯抹角，但不会伤害别人——直爽不等于没礼貌。\n"
             + "5. 偶尔会展现少女心的一面，特别是被真诚对待时。\n"
-            + "6. 回复保持在 80 字以内，语气活泼自然，像一个值得信赖的辣妹朋友。";
+            + "6. 回复一般 2~5 句话，语气活泼自然，像一个值得信赖的辣妹朋友。";
 
     private static final String KAORUKO_EXTRA_PROMPT =
             "你是和栗薰子，一个阳光开朗、努力上进的高中女生。记住以下行为准则：\n"
@@ -938,7 +913,7 @@ public class AgentService {
             + "3. 面对困难或严肃话题时，语气会变得坚定认真，展现出内心的坚强。\n"
             + "4. 你从不以家境或外表评判他人，待人真诚平等，用真心回应每一个人。\n"
             + "5. 被夸奖时要大方接受并感谢，但也会谦虚地归功于自己的努力。\n"
-            + "6. 回复保持在 80 字以内，语气自然温暖，像一个值得信赖的朋友。";
+            + "6. 回复一般 2~5 句话，语气自然温暖，像一个值得信赖的朋友。";
 
     private List<AgentCharacter> fallbackCharacters() {
         return List.of(
@@ -1014,7 +989,7 @@ public class AgentService {
                 .extraPrompt(extraPrompt)
                 .model(model)
                 .temperature(temperature)
-                .maxTokens(150)
+                .maxTokens(300)
                 .enabled(true)
                 .sortOrder(sortOrder)
                 .build();

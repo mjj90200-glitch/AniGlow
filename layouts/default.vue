@@ -480,9 +480,7 @@
                 <p class="font-semibold mb-1">登录失败</p>
                 <p class="text-xs opacity-80">{{ loginError }}</p>
                 <p class="text-xs mt-2 opacity-70">
-                  解决方法：前往 Authing 控制台 →
-                  <strong>应用 → 自建应用 → 访问授权</strong> →
-                  将默认权限设为<strong>"允许所有用户访问"</strong>
+                  请检查用户名和密码，或稍后重试。
                 </p>
               </div>
             </div>
@@ -502,6 +500,12 @@
     <ProfileSetupModal
       v-model:visible="showProfileModal"
       @complete="handleProfileComplete"
+    />
+
+    <CredentialsSetupModal
+      :visible="userStore.needsCredentials"
+      @complete="triggerFireflyBurst"
+      @logout="handleLogout"
     />
 
     <div
@@ -741,8 +745,7 @@ function closeAuthingGuard() {
 }
 
 /** 自定义登录表单回调 */
-function handleAuthingLogin(authingUser: any, token?: string) {
-  console.log('[Authing] 登录成功:', authingUser)
+function handleAuthingLogin() {
   loginError.value = ''
   closeAuthingGuard()
   triggerFireflyBurst()
@@ -765,8 +768,8 @@ async function handleProfileComplete(data: { name: string; avatar: string }) {
   console.log('[Profile] 资料完善完成:', data)
 }
 
-function handleLogout() {
-  userStore.logout()
+async function handleLogout() {
+  await userStore.logout()
   userMenuOpen.value = false
   mobileOpen.value = false
   showProfileModal.value = false

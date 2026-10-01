@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -66,7 +67,7 @@ public class JikanSyncService {
                                 .queryParam("page", page)
                                 .queryParam("limit", 25)
                                 .build())
-                        .retrieve().bodyToMono(JikanResponse.class).block();
+                        .retrieve().bodyToMono(JikanResponse.class).retryWhen(jikanRetry()).block();
                 if (response == null || response.data == null) continue;
                 for (JikanAnime anime : response.data) {
                     try {
@@ -100,28 +101,59 @@ public class JikanSyncService {
         log.info("开始同步 Jikan 番剧数据...");
 
         try {
-            // 分页获取 Top Anime（每页 25 条，获取 25 页 = 625 条）
-            for (int page = 1; page <= 25; page++) {
+            // 分页获取 Top Anime（每页 25 条，获取 40 页 = 1000 条，覆盖更多非头部番剧）
+            for (int page = 1; page <= 40; page++) {
                 fetchAndSaveTopAnime(page);
                 Thread.sleep(requestDelay);
             }
             log.info("Jikan Top Anime 同步完成");
 
-            // 同步当季新番
-            fetchAndSaveSeasonal("now");
+            // 同步当季新番（各3页）
+            fetchAndSaveSeasonal("now", 3);
             Thread.sleep(requestDelay);
-            fetchAndSaveSeasonal("upcoming");
+            fetchAndSaveSeasonal("upcoming", 3);
             log.info("当季新番同步完成");
 
-            // 热门类型：校园(23)、热血(27)、异世界(62) — 每次5页
-            for (int gid : new int[]{23, 27, 62}) {
+            // 按评分排序：每类型8页，深入非热门区域
+            for (int gid : GENRE_TAG.keySet()) {
                 final int genreId = gid;
-                for (int p = 1; p <= 5; p++) {
-                    fetchAndSaveGenre(genreId, p);
+                for (int p = 1; p <= 8; p++) {
+                    fetchAndSaveGenre(genreId, p, "score", "desc");
                     Thread.sleep(requestDelay);
                 }
             }
-            log.info("热门类型番剧同步完成");
+            log.info("全部类型（评分排序）番剧同步完成");
+
+            // 同步近6年历史季度番剧（每季10页=250部，覆盖当季所有番剧包括冷门）
+            String[][] historicalSeasons = {
+                {"2020", "winter"}, {"2020", "spring"}, {"2020", "summer"}, {"2020", "fall"},
+                {"2021", "winter"}, {"2021", "spring"}, {"2021", "summer"}, {"2021", "fall"},
+                {"2022", "winter"}, {"2022", "spring"}, {"2022", "summer"}, {"2022", "fall"},
+                {"2023", "winter"}, {"2023", "spring"}, {"2023", "summer"}, {"2023", "fall"},
+                {"2024", "winter"}, {"2024", "spring"}, {"2024", "summer"}, {"2024", "fall"},
+                {"2025", "winter"}, {"2025", "spring"}, {"2025", "summer"}, {"2025", "fall"},
+                {"2026", "winter"}, {"2026", "spring"},
+            };
+            for (String[] s : historicalSeasons) {
+                fetchAndSaveSeason(s[0], s[1], 10);
+                Thread.sleep(requestDelay);
+            }
+            log.info("历史季度番剧同步完成");
+
+            // --- 深度挖掘（仅库存不足时执行，每次只跑一个维度避免触发限流） ---
+            long currentCount = animeRepository.count();
+            if (currentCount < 2500) {
+                log.info("当前库存 {} < 2500，启动深度挖掘...", currentCount);
+
+                // 剧场版/OVA/特别篇（各5页，按会员数排序）
+                for (String type : new String[]{"movie", "ova", "special"}) {
+                    for (int p = 1; p <= 5; p++) {
+                        fetchAndSaveByType(type, p);
+                        Thread.sleep(requestDelay);
+                    }
+                }
+                log.info("剧场版/OVA/特别篇同步完成");
+            }
 
         } catch (Exception e) {
             log.error("同步 Jikan 数据时出错", e);
@@ -153,32 +185,43 @@ public class JikanSyncService {
      * 获取并保存当季新番
      */
     private void fetchAndSaveSeasonal(String seasonPath) {
-        try {
-            JikanResponse response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/seasons/" + seasonPath)
-                            .queryParam("limit", 25)
-                            .build())
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, clientResponse -> {
-                        log.error("Jikan 当季 API 请求失败: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("API 请求失败"));
-                    })
-                    .bodyToMono(JikanResponse.class)
-                    .block();
+        fetchAndSaveSeasonal(seasonPath, 1);
+    }
 
-            if (response == null || response.data == null) return;
+    /**
+     * 获取并保存当季新番（支持分页）
+     */
+    private void fetchAndSaveSeasonal(String seasonPath, int pages) {
+        for (int page = 1; page <= pages; page++) {
+            final int p = page;
+            try {
+                JikanResponse response = webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/seasons/" + seasonPath)
+                                .queryParam("page", p)
+                                .queryParam("limit", 25)
+                                .build())
+                        .retrieve()
+                        .onStatus(HttpStatusCode::isError, clientResponse -> {
+                            log.error("Jikan 当季 API 请求失败: {}", clientResponse.statusCode());
+                            return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
+                        })
+                        .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
+                        .block();
 
-            for (JikanAnime anime : response.data) {
-                try {
-                    saveOrUpdateAnime(anime);
-                } catch (Exception e) {
-                    log.error("保存当季动漫 {} 时出错", anime.title, e);
+                if (response == null || response.data == null) continue;
+
+                for (JikanAnime anime : response.data) {
+                    try {
+                        saveOrUpdateAnime(anime);
+                    } catch (Exception e) {
+                        log.error("保存当季动漫 {} 时出错", anime.title, e);
+                    }
                 }
+                log.info("已同步当季新番({})第{}页: {} 条", seasonPath, page, response.data.size());
+            } catch (Exception e) {
+                log.error("获取当季新番({})第{}页时出错", seasonPath, page, e);
             }
-            log.info("已同步当季新番({}): {} 条", seasonPath, response.data.size());
-        } catch (Exception e) {
-            log.error("获取当季新番({})时出错", seasonPath, e);
         }
     }
 
@@ -186,18 +229,63 @@ public class JikanSyncService {
      * 同步指定年份/季度番剧
      */
     private void fetchAndSaveSeason(String year, String season) {
+        fetchAndSaveSeason(year, season, 1);
+    }
+
+    /**
+     * 同步指定年份/季度番剧（支持分页）
+     */
+    private void fetchAndSaveSeason(String year, String season, int pages) {
+        for (int page = 1; page <= pages; page++) {
+            final int p = page;
+            try {
+                JikanResponse response = webClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/seasons/" + year + "/" + season)
+                                .queryParam("page", p)
+                                .queryParam("limit", 25)
+                                .build())
+                        .retrieve()
+                        .onStatus(HttpStatusCode::isError, clientResponse -> {
+                            log.error("Jikan 季度 API 请求失败: {}", clientResponse.statusCode());
+                            return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
+                        })
+                        .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
+                        .block();
+
+                if (response == null || response.data == null) continue;
+
+                for (JikanAnime anime : response.data) {
+                    try { saveOrUpdateAnime(anime); } catch (Exception e) {}
+                }
+                log.info("已同步 {} {} 第{}页: {} 条", year, season, page, response.data.size());
+            } catch (Exception e) {
+                log.error("获取 {} {} 第{}页数据时出错", year, season, page, e);
+            }
+        }
+    }
+
+    /**
+     * 按年份同步番剧（按会员数排序，挖掘各年份忠实粉丝向作品）
+     */
+    private void fetchAndSaveYear(int year, int page) {
         try {
             JikanResponse response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/seasons/" + year + "/" + season)
+                            .path("/anime")
+                            .queryParam("start_date", year + "-01-01")
+                            .queryParam("end_date", year + "-12-31")
+                            .queryParam("order_by", "members")
+                            .queryParam("sort", "desc")
+                            .queryParam("page", page)
                             .queryParam("limit", 25)
                             .build())
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, clientResponse -> {
-                        log.error("Jikan 季度 API 请求失败: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("API 请求失败"));
+                        log.error("Jikan 年份 API 请求失败: {}", clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
                     })
-                    .bodyToMono(JikanResponse.class)
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
                     .block();
 
             if (response == null || response.data == null) return;
@@ -205,39 +293,160 @@ public class JikanSyncService {
             for (JikanAnime anime : response.data) {
                 try { saveOrUpdateAnime(anime); } catch (Exception e) {}
             }
-            log.info("已同步 {} {}: {} 条", year, season, response.data.size());
+            log.info("已同步 {} 年第{}页: {} 条", year, page, response.data.size());
         } catch (Exception e) {
-            log.error("获取 {} {} 数据时出错", year, season, e);
+            log.error("获取 {} 年第{}页数据时出错", year, page, e);
         }
     }
 
-    /** MAL genre ID → 补充标签名 */
-    private static final Map<Integer, String> GENRE_TAG = Map.of(
-        23, "School",     // 校园
-        27, "Shounen",    // 热血
-        62, "Isekai"      // 异世界
-    );
-
     /**
-     * 按类型同步番剧，并自动补上 Jikan 不返回的类型标签
+     * 按类型（tv/movie/ova/special）同步番剧，按会员数排序
      */
-    private void fetchAndSaveGenre(int genreId, int page) {
+    private void fetchAndSaveByType(String type, int page) {
         try {
             JikanResponse response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/anime")
-                            .queryParam("genres", genreId)
-                            .queryParam("order_by", "score")
+                            .queryParam("type", type)
+                            .queryParam("order_by", "members")
                             .queryParam("sort", "desc")
                             .queryParam("page", page)
                             .queryParam("limit", 25)
                             .build())
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, clientResponse -> {
-                        log.error("Jikan 类型 API 请求失败: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("API 请求失败"));
+                        log.error("Jikan 类型({}) API 请求失败: {}", type, clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
                     })
-                    .bodyToMono(JikanResponse.class)
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
+                    .block();
+
+            if (response == null || response.data == null) return;
+
+            for (JikanAnime anime : response.data) {
+                try { saveOrUpdateAnime(anime); } catch (Exception e) {}
+            }
+            log.info("已同步 type={} 第{}页: {} 条", type, page, response.data.size());
+        } catch (Exception e) {
+            log.error("获取 type={} 第{}页数据时出错", type, page, e);
+        }
+    }
+
+    /**
+     * 无过滤全量同步（仅排序，命中 Jikan 简单索引，速度最快）
+     */
+    private void fetchAndSaveAllAnime(int page, String orderBy, String sort) {
+        try {
+            JikanResponse response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/anime")
+                            .queryParam("order_by", orderBy)
+                            .queryParam("sort", sort)
+                            .queryParam("page", page)
+                            .queryParam("limit", 25)
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, clientResponse -> {
+                        log.error("Jikan 全量 API 请求失败: {}", clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
+                    })
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
+                    .block();
+
+            if (response == null || response.data == null) return;
+
+            for (JikanAnime anime : response.data) {
+                try { saveOrUpdateAnime(anime); } catch (Exception e) {}
+            }
+        } catch (Exception e) {
+            log.error("获取全量第{}页({}/{})数据时出错", page, orderBy, sort, e);
+        }
+    }
+
+    /**
+     * 按首字母同步番剧（按会员数排序，正交维度挖掘隐藏作品）
+     */
+    private void fetchAndSaveByLetter(String letter, int page) {
+        try {
+            JikanResponse response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/anime")
+                            .queryParam("letter", letter)
+                            .queryParam("order_by", "members")
+                            .queryParam("sort", "desc")
+                            .queryParam("page", page)
+                            .queryParam("limit", 25)
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, clientResponse -> {
+                        log.error("Jikan 字母({}) API 请求失败: {}", letter, clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
+                    })
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
+                    .block();
+
+            if (response == null || response.data == null) return;
+
+            for (JikanAnime anime : response.data) {
+                try { saveOrUpdateAnime(anime); } catch (Exception e) {}
+            }
+            log.info("已同步 letter={} 第{}页: {} 条", letter, page, response.data.size());
+        } catch (Exception e) {
+            log.error("获取 letter={} 第{}页数据时出错", letter, page, e);
+        }
+    }
+
+    /** MAL genre ID → 补充标签名（Jikan 按 ID 筛选时可能不返回该类型名，需补标） */
+    private static final Map<Integer, String> GENRE_TAG = Map.ofEntries(
+        Map.entry(1, "Action"),         // 动作
+        Map.entry(2, "Adventure"),      // 冒险
+        Map.entry(4, "Comedy"),         // 喜剧
+        Map.entry(7, "Mystery"),        // 悬疑
+        Map.entry(8, "Drama"),          // 剧情
+        Map.entry(10, "Fantasy"),       // 奇幻
+        Map.entry(14, "Horror"),        // 恐怖
+        Map.entry(18, "Mecha"),         // 机甲
+        Map.entry(22, "Romance"),       // 恋爱
+        Map.entry(23, "School"),        // 校园
+        Map.entry(24, "Sci-Fi"),        // 科幻
+        Map.entry(27, "Shounen"),       // 热血
+        Map.entry(30, "Sports"),        // 运动
+        Map.entry(36, "Slice of Life"), // 日常
+        Map.entry(37, "Supernatural"),  // 超自然
+        Map.entry(40, "Psychological"), // 心理
+        Map.entry(41, "Thriller"),      // 惊悚
+        Map.entry(42, "Seinen"),        // 青年
+        Map.entry(43, "Josei"),         // 女性向
+        Map.entry(62, "Isekai")         // 异世界
+    );
+
+    /**
+     * 按类型同步番剧（评分排序），并自动补上 Jikan 不返回的类型标签
+     */
+    private void fetchAndSaveGenre(int genreId, int page) {
+        fetchAndSaveGenre(genreId, page, "score", "desc");
+    }
+
+    /**
+     * 按类型同步番剧（自定义排序），并自动补上 Jikan 不返回的类型标签
+     */
+    private void fetchAndSaveGenre(int genreId, int page, String orderBy, String sort) {
+        try {
+            JikanResponse response = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/anime")
+                            .queryParam("genres", genreId)
+                            .queryParam("order_by", orderBy)
+                            .queryParam("sort", sort)
+                            .queryParam("page", page)
+                            .queryParam("limit", 25)
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, clientResponse -> {
+                        log.error("Jikan 类型 API 请求失败: {}", clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
+                    })
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
                     .block();
 
             if (response == null || response.data == null) return;
@@ -252,7 +461,7 @@ public class JikanSyncService {
                     }
                 } catch (Exception e) {}
             }
-            log.info("已同步类型({})第{}页: {} 条", genreId, page, response.data.size());
+            log.info("已同步类型({})第{}页({}/{}): {} 条", genreId, page, orderBy, sort, response.data.size());
         } catch (Exception e) {
             log.error("获取类型({})第{}页时出错", genreId, page, e);
         }
@@ -274,6 +483,15 @@ public class JikanSyncService {
     /**
      * 获取并保存 Top Anime
      */
+    /** Jikan 5xx/429 瞬时错误自动重试：一次 504 不再废掉整页同步 */
+    private reactor.util.retry.Retry jikanRetry() {
+        return reactor.util.retry.Retry.backoff(2, Duration.ofSeconds(5))
+                .filter(e -> {
+                    String m = String.valueOf(e.getMessage());
+                    return m.startsWith("JIKAN_RETRYABLE_");
+                });
+    }
+
     private void fetchAndSaveTopAnime(int page) {
         try {
             JikanResponse response = webClient.get()
@@ -285,9 +503,9 @@ public class JikanSyncService {
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, clientResponse -> {
                         log.error("Jikan API 请求失败: {}", clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("API 请求失败"));
+                        return Mono.error(new RuntimeException("JIKAN_RETRYABLE_" + clientResponse.statusCode().value()));
                     })
-                    .bodyToMono(JikanResponse.class)
+                    .bodyToMono(JikanResponse.class).retryWhen(jikanRetry())
                     .block();
 
             if (response == null || response.data == null) {

@@ -30,6 +30,17 @@ public class AuthController {
         return success("注册成功", authService.register(request));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return success("登录状态已刷新", authService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@RequestBody LogoutRequest request) {
+        authService.logout(request);
+        return success("已安全退出", null);
+    }
+
     @PostMapping("/authing-login")
     public ResponseEntity<ApiResponse<AuthResponse>> authingLogin(
             @RequestHeader(value = "X-Auth-Bridge-Secret", required = false) String bridgeSecret,
@@ -50,6 +61,14 @@ public class AuthController {
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @RequestBody ProfileUpdateRequest request) {
         return success("资料已更新", authService.updateProfile(userDetails.getId(), request));
+    }
+
+    @PostMapping("/set-credentials")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<AuthResponse>> setCredentials(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @Valid @RequestBody SetCredentialsRequest request) {
+        return success("用户名和密码已设置", authService.setCredentials(userDetails.getId(), request));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> success(String message, T data) {

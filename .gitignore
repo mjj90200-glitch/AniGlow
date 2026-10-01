@@ -25,6 +25,11 @@ __pycache__/
 .idea
 .claude
 
+# macOS AppleDouble junk copied from Mac volumes
+._*
+# Stray dir created by a misquoted --host argument
+--host/
+
 # Redis dump
 dump.rdb
 
@@ -47,3 +52,6 @@ test_sucess
 .env
 .env.*
 !.env.example
+
+# 安全扫描插件本地产物
+.mimosa/

@@ -118,7 +118,10 @@
               >
                 <img :src="img.preview" class="w-full h-full object-cover" alt="预览" />
                 <div v-if="img.uploading" class="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <span class="w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin"></span>
+                  <div class="text-center text-white">
+                    <span class="mx-auto block w-5 h-5 border-2 border-white/60 border-t-white rounded-full animate-spin"></span>
+                    <span class="mt-1 block text-[9px] font-bold">{{ img.stage === 'optimizing' ? '优化中' : '上传中' }}</span>
+                  </div>
                 </div>
                 <div v-if="img.error" class="absolute inset-0 bg-sakura/80 flex items-center justify-center text-white text-[10px] font-bold text-center leading-tight p-1">
                   {{ img.error }}
@@ -131,13 +134,17 @@
               <label
                 v-if="draftImages.length < MAX_IMAGES"
                 class="w-20 h-20 rounded-2xl border-2 border-dashed border-firefly/30 flex items-center justify-center cursor-pointer hover:border-firefly/60 transition shrink-0"
+                role="button"
+                tabindex="0"
+                aria-label="添加图片"
               >
                 <span class="text-firefly/50 text-2xl font-light">+</span>
                 <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple class="hidden" @change="handleImageSelect" />
               </label>
             </div>
             <p v-if="draftImages.length > 0" class="mt-1.5 text-[11px] text-gray-400 font-bold">
-              已选 {{ draftImages.length }}/{{ MAX_IMAGES }} 张 · 单张不超过 10MB
+              <template v-if="pendingImageCount > 0">正在处理 {{ pendingImageCount }} 张图片，请稍候...</template>
+              <template v-else>已选 {{ draftImages.length }}/{{ MAX_IMAGES }} 张 · 发布前已自动优化大小</template>
             </p>
             <p v-if="submitError" class="mt-2 text-sm font-bold text-sakura-dark">{{ submitError }}</p>
             <div class="flex justify-end gap-3 mt-5">
@@ -162,6 +169,7 @@
 import { MessageCircle, PenLine, Users, X } from 'lucide-vue-next'
 import type { CommunityPostDto } from '~/composables/useCommunity'
 import PostCard from '~/components/community/PostCard.vue'
+import { optimizeCommunityImage } from '~/utils/image-upload'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug || ''))
@@ -177,7 +185,16 @@ const draftContent = ref('')
 const submitError = ref('')
 const submitting = ref(false)
 
-const draftImages = ref<{ file: File; preview: string; uploading: boolean; url?: string; error?: string }[]>([])
+type DraftImage = {
+  file: File
+  preview: string
+  uploading: boolean
+  stage: 'optimizing' | 'uploading' | 'done'
+  url?: string
+  error?: string
+}
+
+const draftImages = ref<DraftImage[]>([])
 const MAX_IMAGES = 9
 
 const currentPage = ref(0)
@@ -198,7 +215,11 @@ const { data: communityData, refresh: refreshCommunity } = await useAsyncData(
 )
 
 const community = computed(() => communityData.value)
-const canSubmit = computed(() => draftTitle.value.trim().length > 0 && draftContent.value.trim().length > 0)
+const pendingImageCount = computed(() => draftImages.value.filter(image => image.uploading).length)
+const imagesReady = computed(() => draftImages.value.every(image => !image.uploading && !image.error))
+const canSubmit = computed(() => draftTitle.value.trim().length > 0
+  && draftContent.value.trim().length > 0
+  && imagesReady.value)
 
 const hasMore = computed(() => posts.value.length < totalPosts.value)
 const remainingPosts = computed(() => totalPosts.value - posts.value.length)
@@ -253,19 +274,24 @@ function handleImageSelect(e: Event) {
       file,
       preview: URL.createObjectURL(file),
       uploading: true,
+      stage: 'optimizing' as const,
       url: undefined as string | undefined,
       error: undefined as string | undefined,
     }
     draftImages.value.push(item)
-    uploadSingleImage(item)
+    // 使用数组返回的响应式代理，确保上传进度和发布状态会立即刷新。
+    void uploadSingleImage(draftImages.value[draftImages.value.length - 1])
   })
   input.value = ''
 }
 
 async function uploadSingleImage(item: typeof draftImages.value[number]) {
   try {
+    item.file = await optimizeCommunityImage(item.file, item.preview)
+    item.stage = 'uploading'
     const urls = await uploadImages([item.file])
     item.url = urls[0]
+    item.stage = 'done'
     item.uploading = false
   } catch (e: any) {
     item.error = e?.message || '上传失败'

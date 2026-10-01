@@ -52,7 +52,8 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").hasRole("ADMIN")
                     // 公开 API（context-path 已是 /api，此处路径无需再写 /api 前缀）
-                    .requestMatchers("/auth/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/refresh",
+                            "/auth/logout", "/auth/authing-login").permitAll()
                     .requestMatchers("/anime/**").permitAll()
                     .requestMatchers("/ranking/**").permitAll()
                     .requestMatchers("/ratings/anime/**").permitAll()

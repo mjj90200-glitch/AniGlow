@@ -8,21 +8,24 @@ export default defineEventHandler(async (event) => {
   const target = `${backendUrl}${event.path}`
 
   const contentType = getHeader(event, 'content-type') || ''
-  const authorization = getHeader(event, 'authorization')
-    || (getCookie(event, 'aniglow_backend_token')
-      ? `Bearer ${getCookie(event, 'aniglow_backend_token')}`
-      : undefined)
+  let authorization = accessAuthorization(event) || getHeader(event, 'authorization') || undefined
   const rawBody = await readRawBody(event, false)
 
   try {
-    const response = await fetch(target, {
+    const send = (auth?: string) => fetch(target, {
       method: 'POST',
       headers: {
         'Content-Type': contentType,
-        ...(authorization ? { Authorization: authorization } : {}),
+        ...(auth ? { Authorization: auth } : {}),
       },
       body: rawBody as any,
     })
+    let response = await send(authorization)
+    if (response.status === 401) {
+      const refreshed = await refreshAuthSession(event)
+      authorization = refreshed?.token ? `Bearer ${refreshed.token}` : undefined
+      if (authorization) response = await send(authorization)
+    }
 
     const responseText = await response.text()
     if (!response.ok) {

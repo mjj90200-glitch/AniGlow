@@ -14,10 +14,18 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
     set +a
 fi
 
+# 本地开发凭据（.env.local，不入库），在 .env 之后加载以优先生效
+if [ -f "$SCRIPT_DIR/.env.local" ]; then
+    set -a
+    source "$SCRIPT_DIR/.env.local"
+    set +a
+fi
+
 # ─── JDK 选择 ──────────────────────────────────────────────────
-# 优先使用 JDK 21（编译版本），回退到系统默认
-if [ -f "/Users/mac/Library/Java/JavaVirtualMachines/ms-21.0.10/Contents/Home/bin/java" ]; then
-    JAVA_BIN="/Users/mac/Library/Java/JavaVirtualMachines/ms-21.0.10/Contents/Home/bin/java"
+# 优先使用 ~/.jdks 下的 Temurin 21（编译版本），回退 JAVA_HOME / PATH
+JDK21_CANDIDATES=(~/.jdks/temurin-21*/bin/java)
+if [ -e "${JDK21_CANDIDATES[0]}" ]; then
+    JAVA_BIN="${JDK21_CANDIDATES[0]}"
 elif [ -n "${JAVA_HOME:-}" ] && [ -f "$JAVA_HOME/bin/java" ]; then
     JAVA_BIN="$JAVA_HOME/bin/java"
 else

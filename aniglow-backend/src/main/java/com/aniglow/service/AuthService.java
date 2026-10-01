@@ -4,9 +4,9 @@ import com.aniglow.dto.auth.*;
 import com.aniglow.entity.User;
 import com.aniglow.exception.ResourceNotFoundException;
 import com.aniglow.repository.UserRepository;
-import com.aniglow.security.JwtUtils;
 import com.aniglow.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,7 +26,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtils jwtUtils;
+    private final TokenService tokenService;
     private final UserDisplayNameResolver displayNameResolver;
 
     @Transactional
@@ -36,23 +36,27 @@ public class AuthService {
         UserDetailsImpl details = (UserDetailsImpl) authentication.getPrincipal();
         userRepository.updateLastLoginTime(details.getId(), LocalDateTime.now());
         User user = findUser(details.getId());
-        return response(user, jwtUtils.generateToken(details), jwtUtils.generateRefreshToken(details), roles(details));
+        return response(user, tokenService.issue(details), roles(details));
     }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String username = request.getUsername().trim();
+        if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("用户名已存在");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("邮箱已被注册");
+        try {
+            User user = userRepository.saveAndFlush(User.builder()
+                    .username(username)
+                    .displayName(normalizeDisplayName(request.getDisplayName()))
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .credentialsInitialized(true)
+                    .role(User.Role.USER).isActive(true).build());
+            UserDetailsImpl details = UserDetailsImpl.build(user);
+            return response(user, tokenService.issue(details), List.of("ROLE_USER"));
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalArgumentException("用户名已存在");
         }
-        User user = userRepository.save(User.builder()
-                .username(request.getUsername()).email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(User.Role.USER).isActive(true).build());
-        UserDetailsImpl details = UserDetailsImpl.build(user);
-        return response(user, jwtUtils.generateToken(details), jwtUtils.generateRefreshToken(details), List.of("ROLE_USER"));
     }
 
     @Transactional
@@ -80,7 +84,39 @@ public class AuthService {
         if (changed) userRepository.save(user);
         userRepository.updateLastLoginTime(user.getId(), LocalDateTime.now());
         UserDetailsImpl details = UserDetailsImpl.build(user);
-        return response(user, jwtUtils.generateToken(details), null, roles(details));
+        return response(user, tokenService.issue(details), roles(details));
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        TokenService.RefreshedSession session = tokenService.refresh(request.getRefreshToken());
+        UserDetailsImpl details = (UserDetailsImpl) session.userDetails();
+        return response(findUser(details.getId()), session.tokens(), roles(details));
+    }
+
+    public void logout(LogoutRequest request) {
+        tokenService.revoke(request.getAccessToken(), request.getRefreshToken());
+    }
+
+    @Transactional
+    public AuthResponse setCredentials(Long userId, SetCredentialsRequest request) {
+        User user = findUser(userId);
+        String username = request.getUsername().trim();
+        userRepository.findByUsername(username)
+                .filter(existing -> !existing.getId().equals(userId))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("用户名已存在");
+                });
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setCredentialsInitialized(true);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalArgumentException("用户名已存在");
+        }
+        UserDetailsImpl details = UserDetailsImpl.build(user);
+        return response(user, tokenService.issue(details), roles(details));
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +158,7 @@ public class AuthService {
                 .displayName(displayNameResolver.isSafePublicName(request.getUsername(), phone)
                         ? request.getUsername().trim() : null)
                 .authingId(request.getAuthingId()).avatarUrl(request.getAvatarUrl())
+                .credentialsInitialized(false)
                 .isActive(true).role(User.Role.USER).build());
     }
 
@@ -133,6 +170,11 @@ public class AuthService {
         return userRepository.findByPhone(phone).or(() -> userRepository.findByUsername(phone));
     }
 
+    private AuthResponse response(User user, TokenService.TokenPair tokens, List<String> roles) {
+        return response(user, tokens == null ? null : tokens.accessToken(),
+                tokens == null ? null : tokens.refreshToken(), roles);
+    }
+
     private AuthResponse response(User user, String token, String refreshToken, List<String> roles) {
         return AuthResponse.builder()
                 .token(token).refreshToken(refreshToken).type(token == null ? null : "Bearer")
@@ -140,8 +182,9 @@ public class AuthService {
                 .avatarUrl(user.getAvatarUrl()).phone(user.getPhone())
                 .profileComplete(displayNameResolver.hasText(user.getDisplayName())
                         && !user.getDisplayName().equals(user.getPhone()))
+                .credentialsInitialized(Boolean.TRUE.equals(user.getCredentialsInitialized()))
                 .email(user.getEmail()).roles(roles)
-                .expiresIn(token == null ? null : jwtUtils.getExpirationTime()).build();
+                .expiresIn(token == null ? null : tokenService.getAccessTokenExpiration()).build();
     }
 
     private User findUser(Long id) {
@@ -155,6 +198,10 @@ public class AuthService {
 
     private String normalizePhone(String phone) {
         return displayNameResolver.hasText(phone) ? phone.trim() : null;
+    }
+
+    private String normalizeDisplayName(String displayName) {
+        return displayNameResolver.hasText(displayName) ? displayName.trim() : null;
     }
 
     private String sanitizeId(String id) {

@@ -2,47 +2,49 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { computed, ref } from 'vue'
 
-const cookies = new Map<string, ReturnType<typeof ref<string | null>>>()
-
+const fetchMock = vi.fn()
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('computed', computed)
-vi.stubGlobal('useCookie', (name: string) => {
-  if (!cookies.has(name)) cookies.set(name, ref<string | null>(null))
-  return cookies.get(name)
-})
-vi.stubGlobal('$fetch', vi.fn())
+vi.stubGlobal('$fetch', fetchMock)
 
 const { useUserStore } = await import('../stores/user')
+const user = { id: '9', username: 'firefly', name: '萤火同好', credentialsInitialized: true }
 
 describe('user session', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    localStorage.clear()
-    cookies.clear()
+    fetchMock.mockReset()
   })
 
-  it('restores a persisted profile when the Authing token is present', () => {
-    cookies.set('aniglow_token', ref('authing-token'))
-    localStorage.setItem('aniglow_session', JSON.stringify({ id: '9', name: '萤火同好' }))
+  it('restores the user from the HttpOnly server session', async () => {
+    fetchMock.mockResolvedValueOnce({ data: user })
     const store = useUserStore()
 
-    store.restoreSession()
-
+    expect(await store.restoreSession()).toBe(true)
     expect(store.user?.name).toBe('萤火同好')
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/me')
   })
 
-  it('clears cookies and local state on logout', () => {
-    cookies.set('aniglow_token', ref('authing-token'))
-    cookies.set('aniglow_backend_token', ref('backend-token'))
-    localStorage.setItem('aniglow_session', JSON.stringify({ id: '9', name: '萤火同好' }))
+  it('stores only public user data after username login', async () => {
+    fetchMock.mockResolvedValueOnce({ data: user })
     const store = useUserStore()
-    store.restoreSession()
 
-    store.logout()
+    await store.login('firefly', 'password123')
+
+    expect(store.user).toEqual(user)
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/login', {
+      method: 'POST', body: { username: 'firefly', password: 'password123' },
+    })
+  })
+
+  it('clears local user state after server logout', async () => {
+    fetchMock.mockResolvedValueOnce({ data: user }).mockResolvedValueOnce({ data: null })
+    const store = useUserStore()
+    await store.restoreSession()
+
+    await store.logout()
 
     expect(store.user).toBeNull()
-    expect(store.token).toBeNull()
-    expect(store.backendToken).toBeNull()
-    expect(localStorage.getItem('aniglow_session')).toBeNull()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout', { method: 'POST' })
   })
 })

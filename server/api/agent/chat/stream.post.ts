@@ -8,19 +8,23 @@ export default defineEventHandler(async (event) => {
   const target = `${backendUrl}/api/agent/chat/stream`
 
   const body = await readBody(event)
-  const authorization = getHeader(event, 'authorization')
-    || (getCookie(event, 'aniglow_backend_token')
-      ? `Bearer ${getCookie(event, 'aniglow_backend_token')}`
-      : undefined)
+  let authorization = accessAuthorization(event) || getHeader(event, 'authorization') || undefined
 
-  const response = await fetch(target, {
+  const send = (auth?: string) => fetch(target, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(authorization ? { Authorization: authorization } : {}),
+      ...(auth ? { Authorization: auth } : {}),
     },
     body: JSON.stringify(body),
   })
+
+  let response = await send(authorization)
+  if (response.status === 401) {
+    const refreshed = await refreshAuthSession(event)
+    authorization = refreshed?.token ? `Bearer ${refreshed.token}` : undefined
+    if (authorization) response = await send(authorization)
+  }
 
   if (!response.ok || !response.body) {
     throw createError({ statusCode: response.status, message: '后端流式服务不可用' })

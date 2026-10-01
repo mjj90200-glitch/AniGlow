@@ -25,7 +25,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(unique = true, length = 100)
     private String email;
 
     @Column(nullable = false)
@@ -65,6 +65,10 @@ public class User {
 
     @Column(name = "authing_id", unique = true, length = 100)
     private String authingId;
+
+    @Column(name = "credentials_initialized", nullable = false)
+    @Builder.Default
+    private Boolean credentialsInitialized = true;
 
     public enum Role {
         USER, ADMIN, MODERATOR

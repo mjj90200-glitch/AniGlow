@@ -7,15 +7,20 @@ import com.aniglow.service.BayesianRatingService;
 import com.aniglow.service.JikanSyncService;
 import com.aniglow.service.RedisRankingService;
 import com.aniglow.service.TranslationService;
+import com.aniglow.storage.ImageStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +33,13 @@ import java.util.Map;
 public class AdminController {
 
     private final JikanSyncService jikanSyncService;
+    private final ImageStore imageStore;
+
+    @Value("${aniglow.upload.dir}")
+    private String uploadDir;
+
+    @Value("${aniglow.storage.type:local}")
+    private String storageType;
     private final RedisRankingService redisRankingService;
     private final BayesianRatingService bayesianRatingService;
     private final TranslationService translationService;
@@ -116,6 +128,34 @@ public class AdminController {
         // 异步执行
         new Thread(() -> bayesianRatingService.recalculateAllRatings()).start();
         return ResponseEntity.ok(ApiResponse.success("贝叶斯评分重算任务已启动"));
+    }
+
+    @PostMapping("/storage/migrate")
+    @Operation(summary = "迁移存量图片到对象存储", description = "把本地磁盘的存量图片上传到 OSS（仅 oss 模式可用，幂等可重复执行）",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<String>> migrateImages() throws IOException {
+        if (!"oss".equalsIgnoreCase(storageType)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("当前为本地存储模式（aniglow.storage.type=local），无需迁移"));
+        }
+        Path base = Path.of(uploadDir, "images");
+        if (!Files.exists(base)) {
+            return ResponseEntity.ok(ApiResponse.success("本地无存量图片，迁移完成"));
+        }
+        int migrated = 0;
+        int skipped = 0;
+        try (var walk = Files.walk(base)) {
+            for (Path p : walk.filter(Files::isRegularFile).toList()) {
+                String key = base.relativize(p).toString().replace('\\', '/');
+                if (imageStore.exists(key)) {
+                    skipped++;
+                    continue;
+                }
+                imageStore.store(Files.readAllBytes(p), key);
+                migrated++;
+            }
+        }
+        log.info("存量图片迁移完成: 新上传 {} 张，已存在跳过 {} 张", migrated, skipped);
+        return ResponseEntity.ok(ApiResponse.success("迁移完成: 新上传 " + migrated + " 张，已存在跳过 " + skipped + " 张"));
     }
 
     @GetMapping("/system/status")

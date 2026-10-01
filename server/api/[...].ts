@@ -17,18 +17,11 @@ export default defineEventHandler(async (event) => {
     // 读取查询参数
     const query = getQuery(event)
 
-    // 使用 $fetch 转发请求
-    const response = await $fetch(target, {
+    const fetchBackend = (authorization?: string) => $fetch(target, {
       method: event.method as any,
       headers: {
         'Content-Type': getHeader(event, 'content-type') || 'application/json',
-        ...(getHeader(event, 'authorization')
-          ? { Authorization: getHeader(event, 'authorization') as string }
-          : {}),
-        // 从 cookie 读取后端 JWT 并作为 Authorization 转发
-        ...(getCookie(event, 'aniglow_backend_token')
-          ? { Authorization: `Bearer ${getCookie(event, 'aniglow_backend_token')}` }
-          : {}),
+        ...(authorization ? { Authorization: authorization } : {}),
       },
       query,
       body,
@@ -36,6 +29,16 @@ export default defineEventHandler(async (event) => {
       ignoreResponseError: false,
       timeout: 300000,
     })
+
+    let response
+    try {
+      response = await fetchBackend(accessAuthorization(event) || getHeader(event, 'authorization') || undefined)
+    } catch (error: any) {
+      if (backendStatus(error) !== 401) throw error
+      const refreshed = await refreshAuthSession(event)
+      if (!refreshed?.token) throw error
+      response = await fetchBackend(`Bearer ${refreshed.token}`)
+    }
 
     return response
   } catch (error: any) {

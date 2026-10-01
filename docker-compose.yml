@@ -83,8 +83,8 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       AI_API_KEY: ${AI_API_KEY:?AI_API_KEY is required}
-      AI_BASE_URL: ${AI_BASE_URL:-https://ark.cn-beijing.volces.com/api/coding/v3}
-      AI_MODEL: ${AI_MODEL:-doubao-seed-2.0-pro}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
+      AI_MODEL: ${AI_MODEL:-deepseek-flash}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       AUTH_BRIDGE_SECRET: ${AUTH_BRIDGE_SECRET:?AUTH_BRIDGE_SECRET is required}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32,::1/128,172.16.0.0/12}

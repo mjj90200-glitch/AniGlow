@@ -55,6 +55,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  setAuthSession(event, {
+    token: backendAuth.token,
+    refreshToken: backendAuth.refreshToken,
+    id: backendAuth.userId,
+    username: backendAuth.username,
+    displayName: backendAuth.displayName,
+    avatarUrl: backendAuth.avatarUrl,
+    phone: backendAuth.phone,
+    profileComplete: backendAuth.profileComplete,
+    credentialsInitialized: backendAuth.credentialsInitialized,
+  })
+
   return {
     backendToken: backendAuth.token,
     backendUserId: backendAuth.userId,
@@ -63,5 +75,6 @@ export default defineEventHandler(async (event) => {
     avatarUrl: backendAuth.avatarUrl,
     phone: backendAuth.phone,
     profileComplete: backendAuth.profileComplete,
+    credentialsInitialized: backendAuth.credentialsInitialized,
   }
 })

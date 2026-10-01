@@ -1,4 +1,13 @@
 spring:
+  ai:
+    deepseek:
+      api-key: test-api-key
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: test-model
+          temperature: 0.7
+
   datasource:
     url: jdbc:h2:mem:aniglow_test;DB_CLOSE_DELAY=-1;MODE=MySQL;NON_KEYWORDS=YEAR,TYPE,STATUS,SOURCE,SEASON,RATING,VALUE
     username: sa
@@ -46,6 +55,8 @@ aniglow:
     bridge-secret: test-auth-bridge-secret-32-characters-minimum
   search:
     fulltext-enabled: false
+  security:
+    token-revocation-enabled: false
   upload:
     dir: ${java.io.tmpdir}/aniglow-test
     max-file-size: 10485760
@@ -61,20 +72,9 @@ aniglow:
     sync-interval: 3600000
     request-delay: 0
 
-  ai:
-    openai:
-      api-key: test-api-key
-      base-url: https://ark.cn-beijing.volces.com/api/coding/v3
-      enabled: false
-      timeout: 5000
-      chat:
-        options:
-          model: test-model
-          temperature: 0.7
-
   jwt:
     secret: YW5pZ2xvdy1qd3Qtc2VjcmV0LWtleS1mb3Itc3ByaW5nLWJvb3QtYXBwbGljYXRpb24tdGVzdGtleTEyMzQ1Ng==
-    expiration: 86400000
+    expiration: 900000
     refresh-expiration: 604800000
 
   task:

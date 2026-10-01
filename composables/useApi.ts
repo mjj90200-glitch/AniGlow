@@ -22,10 +22,7 @@ export function useApi() {
       if (!ready) throw resolveApiError(null, '登录状态需要刷新，请重新登录后再操作')
     }
 
-    const headers = { ...options.headers }
-    if (userStore.backendToken) {
-      headers.Authorization = `Bearer ${userStore.backendToken}`
-    }
+    const headers = { 'X-Requested-With': 'XMLHttpRequest', ...options.headers }
 
     try {
       const response = await $fetch<ApiEnvelope<T>>(`${base}${path}`, {
@@ -45,8 +42,11 @@ export function useApi() {
       const ready = await userStore.ensureBackendToken()
       if (!ready) throw resolveApiError(null, '登录状态需要刷新，请重新登录后再操作')
     }
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', ...options.headers }
-    if (userStore.backendToken) headers.Authorization = `Bearer ${userStore.backendToken}`
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...options.headers,
+    }
     const response = await fetch(`${base}${path}`, {
       method: options.method || 'POST',
       headers,

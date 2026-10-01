@@ -22,6 +22,7 @@ public class AuthResponse {
     private String avatarUrl;
     private String phone;
     private Boolean profileComplete;
+    private Boolean credentialsInitialized;
     private String email;
     private List<String> roles;
     private Long expiresIn;

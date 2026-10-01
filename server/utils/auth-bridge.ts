@@ -15,12 +15,14 @@ export async function exchangeBackendToken(
   clientIp: string,
 ): Promise<{
   token: string
+  refreshToken: string
   userId: number
   username: string
   displayName?: string
   avatarUrl?: string
   phone?: string
   profileComplete?: boolean
+  credentialsInitialized?: boolean
 } | null> {
   if (!bridgeSecret) {
     throw new Error('认证桥接密钥未配置')
@@ -47,12 +49,14 @@ export async function exchangeBackendToken(
     if (res?.data?.token) {
       return {
         token: res.data.token,
+        refreshToken: res.data.refreshToken,
         userId: res.data.id,
         username: res.data.username,
         displayName: res.data.displayName,
         avatarUrl: res.data.avatarUrl,
         phone: res.data.phone,
         profileComplete: res.data.profileComplete,
+        credentialsInitialized: res.data.credentialsInitialized,
       }
     }
     console.warn('[Auth Bridge] 后端 JWT 交换失败:', res?.message || res)

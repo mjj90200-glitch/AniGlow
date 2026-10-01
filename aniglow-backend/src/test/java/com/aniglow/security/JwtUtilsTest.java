@@ -86,6 +86,21 @@ class JwtUtilsTest {
 
             assertThat(refreshExpiration).isGreaterThan(accessExpiration);
         }
+
+        @Test
+        @DisplayName("访问和刷新token用途严格隔离")
+        void separatesAccessAndRefreshTokenUsage() {
+            UserDetailsImpl userDetails = createUserDetails();
+            String accessToken = jwtUtils.generateToken(userDetails);
+            String refreshToken = jwtUtils.generateRefreshToken(userDetails);
+
+            assertThat(jwtUtils.validateJwtToken(accessToken)).isTrue();
+            assertThat(jwtUtils.validateRefreshToken(accessToken)).isFalse();
+            assertThat(jwtUtils.validateRefreshToken(refreshToken)).isTrue();
+            assertThat(jwtUtils.validateJwtToken(refreshToken)).isFalse();
+            assertThat(jwtUtils.extractTokenId(accessToken)).isNotBlank();
+            assertThat(jwtUtils.extractTokenId(refreshToken)).isNotBlank();
+        }
     }
 
     @Nested

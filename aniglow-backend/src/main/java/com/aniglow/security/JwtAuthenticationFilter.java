@@ -1,5 +1,6 @@
 package com.aniglow.security;
 
+import com.aniglow.service.TokenService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -29,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
+    private final TokenService tokenService;
 
     @Override
     protected void doFilterInternal(
@@ -40,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (jwt != null) {
             try {
-                if (jwtUtils.validateJwtToken(jwt)) {
+                if (jwtUtils.validateJwtToken(jwt) && !tokenService.isAccessTokenRevoked(jwt)) {
                     String username = jwtUtils.extractUsername(jwt);
 
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);

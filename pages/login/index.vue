@@ -13,7 +13,7 @@
         <p class="text-gray-500 text-sm">登录萤火番舍，发现更多精彩番剧</p>
       </div>
 
-      <!-- 手机验证码登录容器 -->
+      <!-- 用户名密码登录容器 -->
       <div class="glass-card-cream rounded-4xl p-1 overflow-hidden animate-slide-up">
         <div class="relative bg-white/40 rounded-3xl p-6 min-h-[420px]">
           <LoginForm @login="handleLoginSuccess" />

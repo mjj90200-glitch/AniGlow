@@ -8,6 +8,16 @@ spring:
   application:
     name: aniglow-backend
 
+  # Spring AI：统一模型接口（DeepSeek 专用模块，正确处理 reasoning_content）
+  ai:
+    deepseek:
+      base-url: ${AI_BASE_URL:https://api.deepseek.com}
+      api-key: ${AI_API_KEY:}
+      chat:
+        options:
+          model: ${AI_MODEL:deepseek-flash}
+          temperature: 0.7
+
   # MySQL 数据源配置
   datasource:
     url: jdbc:mysql://localhost:3306/aniglow?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
@@ -69,6 +79,7 @@ aniglow:
     key-prefix: "aniglow::"
   security:
     trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1/32,::1/128}
+    token-revocation-enabled: true
   scheduling:
     enabled: true
   search:
@@ -77,6 +88,16 @@ aniglow:
     dir: ${user.home}/aniglow-data
     max-file-size: 10485760
     allowed-types: image/jpeg,image/png,image/gif,image/webp
+
+  # 图片存储：local（本地磁盘，默认）| oss（阿里云对象存储）
+  storage:
+    type: ${STORAGE_TYPE:local}
+  oss:
+    endpoint: ${OSS_ENDPOINT:}
+    bucket: ${OSS_BUCKET:}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+    custom-domain: ${OSS_CUSTOM_DOMAIN:}
 
   # 贝叶斯平均分算法配置
   bayesian:
@@ -96,26 +117,12 @@ aniglow:
     bootstrap-on-empty: false
     request-delay: 1000     # API 请求间隔（毫秒）
 
-  # AI Agent 角色对话配置（火山方舟 Ark API / Coding Plan）
-  ai:
-    openai:
-      api-key: ${AI_API_KEY}
-      base-url: ${AI_BASE_URL:https://ark.cn-beijing.volces.com/api/coding/v3}
-      enabled: true
-      timeout: 30000
-      chat:
-        options:
-          model: ${AI_MODEL:doubao-seed-2.0-lite}
-          temperature: 0.7
-      audio:
-        enabled: false
-      embedding:
-        enabled: false
+  # AI Agent 角色对话配置（模型接口统一走 spring.ai，见文件头部）
 
   # JWT 配置 (使用 Base64 编码的密钥，至少 256 位)
   jwt:
     secret: ${JWT_SECRET}
-    expiration: 86400000    # 24小时（毫秒）
+    expiration: 900000      # 15分钟（毫秒）
     refresh-expiration: 604800000  # 7天（毫秒）
 
 # SpringDoc OpenAPI 配置

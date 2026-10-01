@@ -1,5 +1,6 @@
 package com.aniglow.security;
 
+import com.aniglow.service.TokenService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
@@ -16,7 +17,8 @@ class JwtAuthenticationFilterTest {
 
     private final JwtUtils jwtUtils = mock(JwtUtils.class);
     private final UserDetailsService userDetailsService = mock(UserDetailsService.class);
-    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtils, userDetailsService);
+    private final TokenService tokenService = mock(TokenService.class);
+    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtils, userDetailsService, tokenService);
 
     @AfterEach
     void clearContext() {
@@ -28,6 +30,7 @@ class JwtAuthenticationFilterTest {
         UserDetails details = org.springframework.security.core.userdetails.User
                 .withUsername("member").password("secret").roles("USER").build();
         when(jwtUtils.validateJwtToken("valid-token")).thenReturn(true);
+        when(tokenService.isAccessTokenRevoked("valid-token")).thenReturn(false);
         when(jwtUtils.extractUsername("valid-token")).thenReturn("member");
         when(userDetailsService.loadUserByUsername("member")).thenReturn(details);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -43,6 +46,19 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), new MockFilterChain());
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
-        verifyNoInteractions(jwtUtils, userDetailsService);
+        verifyNoInteractions(jwtUtils, userDetailsService, tokenService);
+    }
+
+    @Test
+    void rejectsARevokedAccessToken() throws Exception {
+        when(jwtUtils.validateJwtToken("revoked-token")).thenReturn(true);
+        when(tokenService.isAccessTokenRevoked("revoked-token")).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer revoked-token");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verifyNoInteractions(userDetailsService);
     }
 }

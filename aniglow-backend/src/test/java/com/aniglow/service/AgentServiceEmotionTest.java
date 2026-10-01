@@ -25,9 +25,11 @@ class AgentServiceEmotionTest {
 
     private final AgentService agentService = new AgentService(
             mock(RedisTemplate.class),
+            null, // stringRedisTemplate
             null, // agentCharacterRepository
             null, // animeRepository
-            new ObjectMapper()
+            new ObjectMapper(),
+            null // chatClient（本测试只验证纯逻辑，不触达模型）
     );
 
     private Method parseEmotionMethod;

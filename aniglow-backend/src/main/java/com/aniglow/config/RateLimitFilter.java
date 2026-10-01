@@ -66,6 +66,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if ("/auth/register".equals(path)) {
             return new Rule("auth-register", 3);
         }
+        if ("/auth/refresh".equals(path)) {
+            return new Rule("auth-refresh", 10);
+        }
+        if ("/auth/set-credentials".equals(path)) {
+            return new Rule("auth-set-credentials", 5);
+        }
         if ("/communities/upload/images".equals(path)) {
             return new Rule("community-upload", 5);
         }
