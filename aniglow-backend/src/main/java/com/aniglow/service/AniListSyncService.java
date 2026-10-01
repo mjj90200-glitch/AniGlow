@@ -49,6 +49,7 @@ public class AniListSyncService {
                   duration
                   format
                   status
+                  countryOfOrigin
                   season
                   seasonYear
                   startDate { year month day }
@@ -227,6 +228,8 @@ public class AniListSyncService {
         if (m.path("duration").asInt(0) > 0) anime.setDurationMinutes(m.path("duration").asInt());
         anime.setType(mapFormat(m.path("format").asText(null)));
         anime.setStatus(mapStatus(m.path("status").asText(null)));
+        // 国家/地区以 AniList 官方字段为权威来源，新增与合并记录都写入
+        anime.setCountry(mapCountry(m.path("countryOfOrigin").asText(null)));
 
         JsonNode start = m.path("startDate");
         if (start.path("year").canConvertToInt()) {
@@ -361,6 +364,29 @@ public class AniListSyncService {
             case "NOT_YET_RELEASED" -> "Not yet aired";
             case "CANCELLED" -> "Cancelled";
             case "HIATUS" -> "Airing";
+            default -> null;
+        };
+    }
+
+    /** AniList 国家代码 → 中文地区名 */
+    private String mapCountry(String code) {
+        if (!hasText(code)) return null;
+        return switch (code.toUpperCase(Locale.ROOT)) {
+            case "JP" -> "日本";
+            case "CN" -> "中国";
+            case "TW" -> "台湾";
+            case "HK" -> "香港";
+            case "KR" -> "韩国";
+            case "US" -> "美国";
+            case "GB" -> "英国";
+            case "FR" -> "法国";
+            case "DE" -> "德国";
+            case "IT" -> "意大利";
+            case "ES" -> "西班牙";
+            case "IN" -> "印度";
+            case "TH" -> "泰国";
+            case "AU" -> "澳大利亚";
+            case "CA" -> "加拿大";
             default -> null;
         };
     }

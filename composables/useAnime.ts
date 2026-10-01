@@ -59,6 +59,43 @@ export function useAnime() {
   const fetchByGenre = async (genre: string, page = 0, size = 20): Promise<AnimeDto[]> =>
     (await fetchByGenreList(genre, page, size)).content
 
+  const fetchFilterOptions = async (): Promise<{
+    genres: string[]
+    types: string[]
+    countries: string[]
+    years: number[]
+  }> => {
+    try {
+      return await request('/anime/filter-options')
+    } catch (error) {
+      console.warn('获取筛选选项失败:', (error as Error).message)
+      return { genres: [], types: [], countries: [], years: [] }
+    }
+  }
+
+  const fetchFilteredAnime = async (
+    filters: { keyword?: string; genre?: string; type?: string; year?: number; country?: string },
+    page = 0,
+    size = 20,
+  ): Promise<AnimeListResponse> => {
+    try {
+      return await request<AnimeListResponse>('/anime/filter', {
+        params: {
+          keyword: filters.keyword || undefined,
+          genre: filters.genre || undefined,
+          type: filters.type || undefined,
+          year: filters.year || undefined,
+          country: filters.country || undefined,
+          page,
+          size,
+        },
+      })
+    } catch (error) {
+      console.warn('筛选查询失败:', (error as Error).message)
+      return emptyPage(size)
+    }
+  }
+
   const fetchReviews = async (animeId: number, page = 0, size = 20): Promise<RatingDto[]> => {
     try { return await request<RatingDto[]>(`/ratings/anime/${animeId}/reviews`, { params: { page, size } }) || [] }
     catch (error) { console.warn('获取评论失败:', (error as Error).message); return [] }
@@ -141,7 +178,7 @@ export function useAnime() {
     fetchTopRated, fetchCommunityRated, fetchFireflyRanking, fetchAnimeList, fetchAnimeById,
     fetchAnimeByMalId, searchAnime, searchAnimeList, fetchByGenre, fetchByGenreList, fetchReviews,
     submitRating, updateRating, fetchRatingReplies, submitRatingReply, likeRatingReply,
-    deleteRating, deleteRatingReply, voteFirefly,
+    deleteRating, deleteRatingReply, voteFirefly, fetchFilterOptions, fetchFilteredAnime,
   }
 }
 

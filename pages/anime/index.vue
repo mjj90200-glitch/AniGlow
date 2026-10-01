@@ -7,7 +7,7 @@
       </p>
       <h1 class="text-3xl font-extrabold text-gray-800">全部番剧</h1>
       <p class="mt-3 max-w-2xl text-sm text-gray-500 leading-7">
-        从 Jikan API 补充了更多番剧数据，按氛围和题材挑一部今天想看的作品吧。
+        接入 AniList 数据源，{{ totalResults > 0 ? totalResults : '6000+' }} 部番剧持续更新，按题材、地区、年份挑一部今天想看的作品吧。
       </p>
     </div>
 
@@ -38,47 +38,108 @@
       </div>
     </section>
 
-    <!-- 分类筛选 -->
+    <!-- 综合筛选区（题材 / 地区 / 年份 / 格式） -->
     <section class="mb-8 rounded-[2rem] border border-white/70 bg-white/60 backdrop-blur-xl p-4 sm:p-5 shadow-[0_18px_50px_rgba(31,68,47,0.08)]">
       <div class="flex items-center justify-between gap-3 mb-4">
         <div>
-          <p class="text-xs font-bold tracking-[0.22em] uppercase text-firefly-600">Genre Garden</p>
-          <h2 class="text-lg font-extrabold text-gray-800 mt-1">按类型挑选</h2>
+          <p class="text-xs font-bold tracking-[0.22em] uppercase text-firefly-600">Filter Garden</p>
+          <h2 class="text-lg font-extrabold text-gray-800 mt-1">筛选</h2>
         </div>
-        <span class="hidden sm:inline-flex items-center rounded-full bg-firefly-50 px-3 py-1 text-xs font-bold text-firefly-700">
-          {{ activeCategory.label }}
-        </span>
+        <div class="flex items-center gap-2">
+          <span class="hidden sm:inline-flex items-center rounded-full bg-firefly-50 px-3 py-1 text-xs font-bold text-firefly-700">
+            {{ activeCategory.label }}
+          </span>
+          <button
+            v-if="hasActiveFilter"
+            type="button"
+            class="rounded-full border border-white/70 bg-white/60 px-3 py-1 text-xs font-bold
+                   text-gray-500 hover:text-firefly-600 hover:border-firefly/30 transition-colors"
+            @click="resetFilters"
+          >
+            重置筛选
+          </button>
+        </div>
       </div>
 
-      <div class="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-        <button
-          v-for="category in categories"
-          :key="category.genre || 'all'"
-          type="button"
-          class="category-chip"
-          :class="{ 'category-chip-active': activeGenre === category.genre }"
-          @click="handleGenreClick(category.genre)"
-        >
-          <span>{{ category.icon }}</span>
-          {{ category.label }}
-        </button>
+      <!-- 题材 -->
+      <div class="flex items-start gap-3 mb-3">
+        <span class="filter-row-label">题材</span>
+        <div class="flex flex-1 flex-wrap gap-2">
+          <button
+            v-for="category in categories"
+            :key="category.genre || 'all'"
+            type="button"
+            class="category-chip"
+            :class="{ 'category-chip-active': activeGenre === category.genre }"
+            @click="activeGenre = category.genre"
+          >
+            <span>{{ category.icon }}</span>
+            {{ category.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 地区 -->
+      <div class="flex items-start gap-3 mb-3">
+        <span class="filter-row-label">地区</span>
+        <div class="flex flex-1 flex-wrap gap-2">
+          <button
+            v-for="option in countryOptions"
+            :key="'c-' + (option.value || 'all')"
+            type="button"
+            class="filter-chip"
+            :class="{ 'category-chip-active': activeCountry === option.value }"
+            @click="activeCountry = option.value"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 格式 -->
+      <div class="flex items-start gap-3 mb-3">
+        <span class="filter-row-label">格式</span>
+        <div class="flex flex-1 flex-wrap gap-2">
+          <button
+            v-for="option in typeOptions"
+            :key="'t-' + (option.value || 'all')"
+            type="button"
+            class="filter-chip"
+            :class="{ 'category-chip-active': activeType === option.value }"
+            @click="activeType = option.value"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 年份 -->
+      <div class="flex items-center gap-3">
+        <span class="filter-row-label">年份</span>
+        <select v-model="activeYear" class="year-select" aria-label="按年份筛选">
+          <option value="">全部年份</option>
+          <option v-for="y in yearOptions" :key="y" :value="y">{{ y }} 年</option>
+        </select>
       </div>
     </section>
 
-    <!-- 搜索结果提示 -->
+    <!-- 搜索/筛选结果提示 -->
     <div
-      v-if="debouncedSearch"
+      v-if="debouncedSearch || hasActiveFilter"
       class="mb-6 flex items-center justify-between"
     >
       <p class="text-sm text-gray-500">
-        搜索 "<span class="font-bold text-gray-700">{{ debouncedSearch }}</span>" 找到
-        <span class="font-bold text-firefly-700">{{ totalResults }}</span> 部番剧
+        <template v-if="debouncedSearch">
+          搜索 "<span class="font-bold text-gray-700">{{ debouncedSearch }}</span>"
+        </template>
+        <template v-else>当前筛选</template>
+        共找到 <span class="font-bold text-firefly-700">{{ totalResults }}</span> 部番剧
       </p>
       <button
-        @click="clearSearch"
+        @click="resetFilters"
         class="text-xs font-bold text-gray-400 hover:text-firefly-600 transition-colors"
       >
-        清除搜索
+        清除全部条件
       </button>
     </div>
 
@@ -164,7 +225,7 @@
       <p v-if="debouncedSearch" class="text-gray-400">
         没有找到与 "{{ debouncedSearch }}" 相关的番剧，试试其他关键词吧
       </p>
-      <p v-else class="text-gray-400">这个分类暂时没有数据，换一个类型试试看吧</p>
+      <p v-else class="text-gray-400">这个筛选组合暂时没有数据，换个条件试试看吧</p>
     </div>
 
     <!-- 分页 -->
@@ -218,27 +279,51 @@ definePageMeta({ keepalive: true })
 import type { AnimeDto, AnimeListResponse } from '~/types/anime'
 import { mapGenres, tagClass, displayTitle, communityScore } from '~/composables/useAnimeI18n'
 
-const { fetchAnimeList, fetchByGenreList, searchAnimeList } = useAnime()
+const { fetchFilterOptions, fetchFilteredAnime } = useAnime()
 const route = useRoute()
 
 const PAGE_SIZE = 60
 
+// ── 题材分类（AniList/MAL 通用题材名，确保筛选结果准确） ──
 const categories = [
   { label: '全部', genre: '', icon: '✦' },
   { label: '热血', genre: 'Action', icon: '⚡' },
-  { label: '奇幻', genre: 'Fantasy', icon: '✧' },
+  { label: '冒险', genre: 'Adventure', icon: '✈' },
+  { label: '搞笑', genre: 'Comedy', icon: '☺' },
   { label: '恋爱', genre: 'Romance', icon: '♡' },
+  { label: '奇幻', genre: 'Fantasy', icon: '✧' },
+  { label: '科幻', genre: 'Sci-Fi', icon: '⌁' },
   { label: '日常', genre: 'Slice of Life', icon: '☁' },
   { label: '校园', genre: 'School', icon: '♧' },
   { label: '治愈', genre: 'Iyashikei', icon: '蛍' },
+  { label: '异世界', genre: 'Isekai', icon: '◇' },
   { label: '音乐', genre: 'Music', icon: '♪' },
   { label: '运动', genre: 'Sports', icon: '★' },
-  { label: '异世界', genre: 'Isekai', icon: '◇' },
-  { label: '科幻', genre: 'Sci-Fi', icon: '⌁' },
   { label: '悬疑', genre: 'Mystery', icon: '?' },
+  { label: '心理', genre: 'Psychological', icon: '◈' },
+  { label: '超自然', genre: 'Supernatural', icon: '✜' },
+  { label: '恐怖', genre: 'Horror', icon: '☾' },
+  { label: '惊悚', genre: 'Thriller', icon: '⌖' },
+  { label: '剧情', genre: 'Drama', icon: '❖' },
+  { label: '机甲', genre: 'Mecha', icon: '⚙' },
+  { label: '魔法少女', genre: 'Mahou Shoujo', icon: '☆' },
 ]
 
+// ── 格式标签映射 ──
+const TYPE_LABELS: Record<string, string> = {
+  TV: 'TV动画',
+  Movie: '剧场版',
+  ONA: 'ONA',
+  OVA: 'OVA',
+  Special: '特别篇',
+  Music: '音乐',
+}
+
+// ── 筛选状态 ──
 const activeGenre = ref('')
+const activeType = ref('')
+const activeCountry = ref('')
+const activeYear = ref<number | ''>('')
 const currentPage = ref(0)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchInput = ref(typeof route.query.q === 'string' ? route.query.q : '')
@@ -254,34 +339,67 @@ onMounted(() => {
   }
 })
 
-function handleGenreClick(genre: string) {
-  activeGenre.value = genre
+function resetFilters() {
   searchInput.value = ''
+  activeGenre.value = ''
+  activeType.value = ''
+  activeCountry.value = ''
+  activeYear.value = ''
 }
 
-function clearSearch() {
-  searchInput.value = ''
-}
+const hasActiveFilter = computed(() =>
+  !!debouncedSearch.value || !!activeGenre.value || !!activeType.value
+  || !!activeCountry.value || activeYear.value !== '',
+)
 
 function goToPage(page: number) {
   currentPage.value = Math.max(0, Math.min(page, totalPages.value - 1))
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// ═══════ 数据获取 ═══════
+// ═══════ 筛选选项集 ═══════
+
+const { data: filterOptions } = await useAsyncData(
+  'anime-filter-options',
+  () => fetchFilterOptions(),
+  { server: true },
+)
+
+const countryOptions = computed(() => {
+  const all = filterOptions.value?.countries ?? []
+  const priority = ['日本', '中国', '韩国', '美国'].filter(c => all.includes(c))
+  const rest = all.filter(c => !priority.includes(c)).sort((a, b) => a.localeCompare(b, 'zh'))
+  return [{ label: '全部', value: '' }, ...[...priority, ...rest].map(c => ({ label: c, value: c }))]
+})
+
+const typeOptions = computed(() => {
+  const all = filterOptions.value?.types ?? []
+  return [
+    { label: '全部', value: '' },
+    ...all.map(t => ({ label: TYPE_LABELS[t] ?? t, value: t })),
+  ]
+})
+
+const yearOptions = computed(() => filterOptions.value?.years ?? [])
+
+// ═══════ 数据获取：统一筛选接口（关键词与所有条件可自由组合） ═══════
 
 const { data, pending } = await useAsyncData(
-  'anime-list-main',
+  'anime-filtered-list',
   async () => {
-    if (debouncedSearch.value) {
-      return searchAnimeList(debouncedSearch.value, currentPage.value, PAGE_SIZE)
-    }
-    if (activeGenre.value) {
-      return fetchByGenreList(activeGenre.value, currentPage.value, PAGE_SIZE)
-    }
-    return fetchAnimeList(currentPage.value, PAGE_SIZE, 'bayesianRating', 'desc')
+    return fetchFilteredAnime(
+      {
+        keyword: debouncedSearch.value || undefined,
+        genre: activeGenre.value || undefined,
+        type: activeType.value || undefined,
+        year: activeYear.value === '' ? undefined : Number(activeYear.value),
+        country: activeCountry.value || undefined,
+      },
+      currentPage.value,
+      PAGE_SIZE,
+    )
   },
-  { server: true, watch: [activeGenre, debouncedSearch, currentPage] }
+  { server: true, watch: [debouncedSearch, activeGenre, activeType, activeCountry, activeYear, currentPage] },
 )
 
 // ═══════ 分页状态同步 ═══════
@@ -318,16 +436,9 @@ const visiblePages = computed(() => {
   return pages
 })
 
-// ═══════ 搜索/类型切换时重置页码 ═══════
+// ═══════ 任意条件变化时回到第一页 ═══════
 
-watch(debouncedSearch, (val) => {
-  if (val) {
-    currentPage.value = 0
-    activeGenre.value = ''
-  }
-})
-
-watch(activeGenre, () => {
+watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYear], () => {
   currentPage.value = 0
 })
 
@@ -364,6 +475,14 @@ onBeforeRouteLeave(() => {
   overflow: hidden;
 }
 
+.filter-row-label {
+  flex: 0 0 3rem;
+  padding-top: 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #8a95a1;
+}
+
 .category-chip {
   display: inline-flex;
   align-items: center;
@@ -391,6 +510,55 @@ onBeforeRouteLeave(() => {
   background: linear-gradient(135deg, rgba(0, 230, 118, 0.92), rgba(134, 239, 172, 0.82));
   color: #ffffff;
   box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 0.55rem 0.9rem;
+  color: #596473;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(31, 68, 47, 0.05);
+  transition: all 0.24s ease;
+}
+
+.filter-chip:hover {
+  color: #07873f;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(0, 170, 68, 0.12);
+}
+
+.filter-chip-active {
+  border-color: rgba(0, 230, 118, 0.45);
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.92), rgba(134, 239, 172, 0.82));
+  color: #ffffff;
+  box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
+}
+
+.year-select {
+  appearance: none;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.62);
+  padding: 0.55rem 2rem 0.55rem 1rem;
+  color: #596473;
+  font-size: 0.82rem;
+  font-weight: 700;
+  outline: none;
+  box-shadow: 0 10px 28px rgba(31, 68, 47, 0.05);
+  transition: all 0.24s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23596473' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+}
+
+.year-select:focus {
+  border-color: rgba(0, 230, 118, 0.45);
 }
 
 /* ── 分页按钮 ───────────────────────────────────── */

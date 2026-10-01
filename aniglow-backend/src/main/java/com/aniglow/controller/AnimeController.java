@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/anime")
@@ -20,6 +21,25 @@ import java.util.List;
 public class AnimeController {
 
     private final AnimeService animeService;
+
+    @GetMapping("/filter")
+    @Operation(summary = "综合筛选番剧", description = "关键词/题材/类型/年份/国家地区可选组合过滤，按贝叶斯评分降序")
+    public ResponseEntity<ApiResponse<AnimeListResponse>> filterAnime(
+            @Parameter(description = "关键词（标题/别名模糊匹配）") @RequestParam(required = false) String keyword,
+            @Parameter(description = "题材（如 Action/Comedy）") @RequestParam(required = false) String genre,
+            @Parameter(description = "类型（TV/Movie/ONA/OVA/Special/Music）") @RequestParam(required = false) String type,
+            @Parameter(description = "年份") @RequestParam(required = false) Integer year,
+            @Parameter(description = "国家/地区（如 日本/中国/美国）") @RequestParam(required = false) String country,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "60") int size) {
+        return ok(animeService.filter(keyword, genre, type, year, country, page, size));
+    }
+
+    @GetMapping("/filter-options")
+    @Operation(summary = "获取筛选选项集", description = "返回库内真实存在的年份/地区/类型/题材，供筛选下拉使用")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> filterOptions() {
+        return ok(animeService.filterOptions());
+    }
 
     @GetMapping
     @Operation(summary = "获取动漫列表", description = "支持分页和排序")

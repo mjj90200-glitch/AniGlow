@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -46,6 +47,31 @@ public class AnimeService {
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
         return animeMapper.toListResponse(animeRepository.findAll(pageable(page, size, sort)));
+    }
+
+    /** 综合筛选：关键词/题材/类型/年份/国家全部可选组合，按贝叶斯评分降序（NULL 在后） */
+    public AnimeListResponse filter(String keyword, String genre, String type,
+                                    Integer year, String country, int page, int size) {
+        String kw = hasText(keyword) ? keyword.toLowerCase() : null;
+        String g = hasText(genre) ? genre : null;
+        String t = hasText(type) ? type : null;
+        String c = hasText(country) ? country : null;
+        Page<Anime> result = animeRepository.filterAnime(kw, g, t, year, c, PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
+        return animeMapper.toListResponse(result);
+    }
+
+    /** 筛选选项集（年份/地区/类型/题材均来自库内真实数据） */
+    public Map<String, Object> filterOptions() {
+        return Map.of(
+                "years", animeRepository.findDistinctYears(),
+                "countries", animeRepository.findDistinctCountries(),
+                "types", animeRepository.findDistinctTypes(),
+                "genres", animeRepository.findDistinctGenres()
+        );
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     @Cacheable(value = "animeDetail", key = "#id")

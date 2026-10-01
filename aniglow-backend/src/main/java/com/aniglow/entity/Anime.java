@@ -43,6 +43,10 @@ public class Anime {
     @Column(name = "anilist_id", unique = true)
     private Long anilistId;
 
+    // 国家/地区（AniList countryOfOrigin 权威映射：日本/中国/韩国/美国等）
+    @Column(name = "country", length = 50)
+    private String country;
+
     @Column(nullable = false, length = 200)
     private String title;
 

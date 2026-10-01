@@ -112,4 +112,37 @@ public interface AnimeRepository extends JpaRepository<Anime, Long> {
     // 按类型统计番剧数
     @Query("SELECT COUNT(DISTINCT a.id) FROM Anime a JOIN a.genres g WHERE g = :genre")
     long countByGenre(@Param("genre") String genre);
+
+    // 综合筛选：关键词 + 题材 + 类型 + 年份 + 国家/地区，全部可选，组合过滤
+    @Query("""
+           SELECT DISTINCT a FROM Anime a LEFT JOIN a.genres g
+           WHERE (:keyword IS NULL OR LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(a.titleEnglish) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(a.titleJapanese) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(a.titleCn) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(a.searchAliases) LIKE LOWER(CONCAT('%', :keyword, '%')))
+             AND (:genre IS NULL OR g = :genre)
+             AND (:type IS NULL OR a.type = :type)
+             AND (:year IS NULL OR a.year = :year)
+             AND (:country IS NULL OR a.country = :country)
+           """)
+    Page<Anime> filterAnime(@Param("keyword") String keyword,
+                            @Param("genre") String genre,
+                            @Param("type") String type,
+                            @Param("year") Integer year,
+                            @Param("country") String country,
+                            Pageable pageable);
+
+    // 筛选选项集
+    @Query("SELECT DISTINCT a.year FROM Anime a WHERE a.year IS NOT NULL ORDER BY a.year DESC")
+    List<Integer> findDistinctYears();
+
+    @Query("SELECT DISTINCT a.country FROM Anime a WHERE a.country IS NOT NULL ORDER BY a.country")
+    List<String> findDistinctCountries();
+
+    @Query("SELECT DISTINCT a.type FROM Anime a WHERE a.type IS NOT NULL ORDER BY a.type")
+    List<String> findDistinctTypes();
+
+    @Query("SELECT DISTINCT g FROM Anime a JOIN a.genres g WHERE g IS NOT NULL ORDER BY g")
+    List<String> findDistinctGenres();
 }
