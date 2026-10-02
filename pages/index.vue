@@ -301,7 +301,7 @@
           </h2>
         </div>
         <NuxtLink
-          to="/community"
+          to="/community/all"
           class="btn-glass text-sm"
         >
           查看全部社区

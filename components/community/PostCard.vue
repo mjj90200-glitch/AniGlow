@@ -41,28 +41,72 @@
         {{ post.content }}
       </p>
 
-      <!-- 保留原始宽高比：不设固定高度、不裁切图片 -->
+      <!-- 小黑盒式紧凑预览：缩小信息流图片，但始终完整显示内容 -->
       <div v-if="imageUrls.length" class="mb-3 overflow-hidden">
-        <div v-if="imageUrls.length === 1" class="max-w-[82%] sm:max-w-[62%]">
+        <div
+          v-if="imageUrls.length === 1"
+          class="inline-flex max-w-full items-center justify-center overflow-hidden rounded-lg bg-gray-50"
+        >
           <img
             :src="imageUrls[0]"
-            class="block w-full h-auto rounded-xl bg-gray-50"
+            class="block w-auto h-auto max-w-full max-h-[220px] sm:max-w-[360px] sm:max-h-[240px] object-contain"
             loading="lazy"
             :alt="`${post.title} 配图 1`"
           />
         </div>
-        <div v-else class="columns-2 sm:columns-3 gap-2 max-w-full sm:max-w-[86%]">
+
+        <div v-else-if="imageUrls.length === 2" class="grid w-full max-w-[420px] grid-cols-2 gap-1.5">
           <div
             v-for="(url, i) in displayedImages"
             :key="i"
-            class="mb-2 break-inside-avoid overflow-hidden rounded-xl bg-gray-50"
+            class="flex h-[132px] sm:h-[160px] items-center justify-center overflow-hidden rounded-lg bg-gray-50"
           >
             <img
               :src="url"
-              class="block w-full h-auto"
+              class="block w-auto h-auto max-w-full max-h-full object-contain"
               loading="lazy"
               :alt="`${post.title} 配图 ${i + 1}`"
             />
+          </div>
+        </div>
+
+        <div v-else-if="imageUrls.length === 3" class="grid w-full max-w-[510px] grid-cols-3 gap-1.5">
+          <div
+            v-for="(url, i) in displayedImages"
+            :key="i"
+            class="flex h-[104px] sm:h-[128px] items-center justify-center overflow-hidden rounded-lg bg-gray-50"
+          >
+            <img
+              :src="url"
+              class="block w-auto h-auto max-w-full max-h-full object-contain"
+              loading="lazy"
+              :alt="`${post.title} 配图 ${i + 1}`"
+            />
+          </div>
+        </div>
+
+        <div
+          v-else
+          class="grid h-[196px] sm:h-[220px] w-full max-w-[510px] grid-cols-[2fr_1fr] grid-rows-2 gap-1.5"
+        >
+          <div
+            v-for="(url, i) in displayedImages"
+            :key="i"
+            class="relative flex items-center justify-center overflow-hidden rounded-lg bg-gray-50"
+            :class="i === 0 ? 'row-span-2' : ''"
+          >
+            <img
+              :src="url"
+              class="block w-auto h-auto max-w-full max-h-full object-contain"
+              loading="lazy"
+              :alt="`${post.title} 配图 ${i + 1}`"
+            />
+            <div
+              v-if="i === 2 && imageUrls.length > 3"
+              class="absolute bottom-1.5 right-1.5 rounded-md bg-black/65 px-2 py-1 text-xs font-extrabold text-white"
+            >
+              +{{ imageUrls.length - 3 }}
+            </div>
           </div>
         </div>
       </div>
@@ -98,7 +142,7 @@ const props = defineProps<{
 
 const imageUrls = computed(() => props.post.images ?? [])
 
-const displayedImages = computed(() => imageUrls.value.slice(0, 9))
+const displayedImages = computed(() => imageUrls.value.slice(0, 3))
 
 const authorName = computed(() => {
   const displayName = (props.post.displayName || '').trim()

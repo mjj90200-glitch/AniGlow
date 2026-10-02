@@ -38,11 +38,12 @@ const navItems = [
   { label: '排行', path: '/ranking', icon: Trophy },
   { label: '每日', path: '/daily', icon: CalendarCheck2 },
   { label: 'AIGC', path: '/agent', icon: Bot },
-  { label: '社区', path: '/community', icon: Users },
+  { label: '社区', path: '/community/all', icon: Users },
 ]
 
 function isActive(path: string) {
   if (path === '/') return route.path === '/'
+  if (path === '/community/all') return route.path.startsWith('/community')
   return route.path === path || route.path.startsWith(`${path}/`)
 }
 </script>

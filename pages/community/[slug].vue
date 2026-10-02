@@ -3,7 +3,7 @@
   <div v-else class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-24">
     <div v-if="!community" class="glass-card-cream rounded-4xl p-10 text-center">
       <h1 class="text-2xl font-black text-gray-800 mb-3">这个盒子还没有被点亮</h1>
-      <NuxtLink to="/community" class="btn-glow inline-flex px-6 py-3">回到社区广场</NuxtLink>
+      <NuxtLink to="/community/all" class="btn-glow inline-flex px-6 py-3">回到社区广场</NuxtLink>
     </div>
 
     <template v-else>
@@ -72,7 +72,7 @@
               <h2 class="text-lg font-extrabold text-gray-400 mb-1.5">还没有帖子</h2>
               <p class="text-sm text-gray-400 mb-5">成为第一个点亮这个盒子的同好吧。</p>
               <button v-if="community.slug !== 'all'" class="btn-glow px-5 py-2.5 text-sm" @click="openPostBox">发布第一帖</button>
-              <NuxtLink v-else to="/community" class="btn-glow inline-flex px-5 py-2.5 text-sm">选择一个社区</NuxtLink>
+              <NuxtLink v-else to="/community/anime" class="btn-glow inline-flex px-5 py-2.5 text-sm">进入番剧社区</NuxtLink>
             </div>
 
           <!-- 加载更多 -->

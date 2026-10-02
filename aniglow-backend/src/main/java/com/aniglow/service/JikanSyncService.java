@@ -564,7 +564,7 @@ public class JikanSyncService {
      * 查找所有 synopsisCn 为 null 但 synopsis 存在的动漫，调用 AI 翻译填补
      * @return 成功修复的数量
      */
-    @Transactional
+    // 无 @Transactional：长批量任务不进大事务，每条独立提交，进度实时可见、失败不整批回滚
     @CacheEvict(cacheNames = {"animeList", "animeDetail", "animeSeason", "ranking"}, allEntries = true)
     public int repairMissingChineseSynopses() {
         var animes = animeRepository.findBySynopsisCnIsNullAndSynopsisIsNotNull();
@@ -575,10 +575,12 @@ public class JikanSyncService {
 
         log.info("发现 {} 条缺失中文简介的动漫，开始修复...", animes.size());
         int repaired = 0;
+        int processed = 0;
 
         for (var anime : animes) {
+            processed++;
             String synopsis = anime.getSynopsis();
-            if (synopsis == null || synopsis.length() < 30 || !isEnglishText(synopsis)) {
+            if (synopsis == null || synopsis.isBlank()) {
                 continue;
             }
 
@@ -588,9 +590,15 @@ public class JikanSyncService {
                     anime.setSynopsisCn(cn);
                     animeRepository.save(anime);
                     repaired++;
-                    log.debug("已翻译简介: {} ({}/{})", anime.getTitle(), repaired, animes.size());
-                    Thread.sleep(500); // 控制翻译 API 调用频率
                 }
+                if (processed % 100 == 0) {
+                    log.info("简介翻译进度: {}/{}（已补 {} 条）", processed, animes.size(), repaired);
+                }
+                Thread.sleep(200); // 控制翻译 API 调用频率
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("简介修复被中断: 已处理 {}/{}", processed, animes.size());
+                break;
             } catch (Exception e) {
                 log.warn("修复简介失败 {}: {}", anime.getTitle(), e.getMessage());
             }

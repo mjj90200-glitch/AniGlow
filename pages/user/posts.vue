@@ -38,7 +38,7 @@
             <FileText class="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h2 class="text-lg font-extrabold text-gray-400 mb-2">还没有帖子</h2>
             <p class="text-sm text-gray-400 mb-5">去社区发一篇帖子吧</p>
-            <NuxtLink to="/community" class="btn-glow inline-flex px-5 py-2.5 text-sm">进入社区</NuxtLink>
+            <NuxtLink to="/community/all" class="btn-glow inline-flex px-5 py-2.5 text-sm">进入社区</NuxtLink>
           </div>
 
           <div v-else class="bg-white rounded-xl border border-gray-100 overflow-hidden">

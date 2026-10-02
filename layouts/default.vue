@@ -80,14 +80,14 @@
             class="relative px-4 py-2 rounded-full text-sm font-semibold
                    transition-all duration-300"
             :class="[
-              route.path === item.path
+              isNavActive(item.path)
                 ? 'text-gray-800'
                 : 'text-gray-500 hover:text-gray-700'
             ]"
           >
             <!-- 当前页指示条 -->
             <span
-              v-if="route.path === item.path"
+              v-if="isNavActive(item.path)"
               class="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full"
               style="background: linear-gradient(90deg, #00E676, #A0D8EF);"
             />
@@ -268,7 +268,7 @@
               class="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold
                      transition-all duration-200"
               :class="[
-                route.path === item.path
+                isNavActive(item.path)
                   ? 'bg-firefly/10 text-firefly-700'
                   : 'text-gray-600 hover:bg-cream-200'
               ]"
@@ -683,8 +683,14 @@ const navItems = [
   { name: '排行', path: '/ranking',   icon: Trophy },
   { name: '每日', path: '/daily',     icon: CalendarCheck2 },
   { name: 'AIGC', path: '/agent',     icon: Bot },
-  { name: '社区', path: '/community', icon: Users },
+  { name: '社区', path: '/community/all', icon: Users },
 ]
+
+function isNavActive(path: string) {
+  if (path === '/') return route.path === '/'
+  if (path === '/community/all') return route.path.startsWith('/community')
+  return route.path === path || route.path.startsWith(`${path}/`)
+}
 
 // 滚动监听
 onMounted(() => {

@@ -10,6 +10,12 @@ spring:
 
   # Spring AI：统一模型接口（DeepSeek 专用模块，正确处理 reasoning_content）
   ai:
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 2000
+        multiplier: 3
+        max-interval: 10000
     deepseek:
       base-url: ${AI_BASE_URL:https://api.deepseek.com}
       api-key: ${AI_API_KEY:}
