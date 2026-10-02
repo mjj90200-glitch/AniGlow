@@ -55,3 +55,6 @@ test_sucess
 
 # 安全扫描插件本地产物
 .mimosa/
+
+# 并行会话的 PR 工作树（临时产物，勿入库）
+_pr_worktree/
