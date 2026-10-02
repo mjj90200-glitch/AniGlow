@@ -7,7 +7,12 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['composables/useAnimeI18n.ts', 'utils/api-client.ts'],
+      include: [
+        'composables/useAnimeI18n.ts',
+        'utils/api-client.ts',
+        'utils/anime-filters.ts',
+        'utils/anime-reviews.ts',
+      ],
       reporter: ['text', 'json-summary'],
       thresholds: {
         statements: 90,
