@@ -1,0 +1,95 @@
+# Nuxt dev/build outputs
+.output
+.nuxt
+.nitro
+.cache
+dist
+coverage
+
+# Node dependencies
+node_modules
+package-lock.json
+
+# Logs
+logs
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Misc
+.DS_Store
+.fleet
+.idea
+.claude
+
+# macOS AppleDouble junk copied from Mac volumes
+._*
+# Stray dir created by a misquoted --host argument
+--host/
+
+# Redis dump
+dump.rdb
+
+# Maven build output (backend)
+aniglow-backend/target/
+aniglow-backend/BOOT-INF/
+aniglow-backend/package.json
+aniglow-backend/package-lock.json
+aniglow-backend/pnpm-lock.yaml
+
+# Local planning/runtime artifacts
+.superpowers/
+test_sucess
+
+# IDE
+*.iml
+.idea/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# 安全扫描插件本地产物
+.mimosa/
+
+# 并行会话的 PR 工作树（临时产物，勿入库）
+_pr_worktree/
+
+# Compose 本地覆盖（机器特定端口/IP钉定，勿提交）
+docker-compose.override.yml
+
+# 会话 Cookie（含令牌，绝不能提交）
+e2e_cookies.txt
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+site-packages/
+venv/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）
