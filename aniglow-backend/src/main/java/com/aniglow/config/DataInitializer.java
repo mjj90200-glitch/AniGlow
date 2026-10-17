@@ -298,7 +298,7 @@ public class DataInitializer implements CommandLineRunner {
                 .catchphrases(catchphrases)
                 .extraPrompt(extraPrompt)
                 .openingAudioUrl("Onodera".equals(code) ? "/audio/onodera-opening.m4a" : null)
-                .model("doubao-seed-2.0-pro")
+                .model("deepseek-chat")
                 .temperature(0.7)
                 .maxTokens(200)
                 .enabled(true)

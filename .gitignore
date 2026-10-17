@@ -58,3 +58,6 @@ test_sucess
 
 # 并行会话的 PR 工作树（临时产物，勿入库）
 _pr_worktree/
+
+# Compose 本地覆盖（机器特定端口/IP钉定，勿提交）
+docker-compose.override.yml
