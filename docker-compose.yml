@@ -92,10 +92,10 @@ services:
       - "8081:8081"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/api/actuator/health"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 90s
     networks:
       - aniglow-net
 
@@ -112,7 +112,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     environment:
       # Authing（前端公开 + 服务端 SDK）
       NUXT_PUBLIC_AUTHING_APP_ID: ${NUXT_PUBLIC_AUTHING_APP_ID:?NUXT_PUBLIC_AUTHING_APP_ID is required}

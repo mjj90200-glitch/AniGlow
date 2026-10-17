@@ -1,44 +1,40 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# 萤火番舍 AniGlow · 生产环境启动脚本
-# 从 .env 加载配置后启动 Nuxt/Nitro 服务
+# AniGlow · 一键启动（Docker Compose 全栈）
+# 用法:  ./start.sh          → 启动并等待就绪（约 30-60 秒）
+#        ./start.sh quick    → 只启动不等待，立即返回
 # ═══════════════════════════════════════════════════════════════
-set -euo pipefail
+cd "$(dirname "$0")"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+# 加载环境变量（.env.local 为机器特定密钥，.env 为通用配置）
+[ -f .env.local ] && { set -a; source .env.local; set +a; }
+[ -f .env ] && { set -a; source .env; set +a; }
 
-ENV_FILE="${SCRIPT_DIR}/.env"
+echo "🚀 启动 AniGlow 全栈..."
+docker compose up -d
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo "❌ 找不到 .env 文件: $ENV_FILE"
-  echo "   请从 .env.docker 复制并填入实际值: cp .env.docker .env"
-  exit 1
+if [ "$1" = "quick" ]; then
+  echo "⚡ 已后台启动: http://localhost:3000 （服务就绪约需 30-60 秒）"
+  exit 0
 fi
 
-echo "📦 从 .env 加载环境变量..."
-set -a
-source "$ENV_FILE"
-set +a
+# ── 等待后端就绪（最多 120 秒）──
+echo -n "⏳ 等待服务就绪 "
+for i in $(seq 1 60); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --noproxy '*' http://localhost:8081/api/actuator/health 2>/dev/null)
+  if [ "$code" = "200" ] || [ "$code" = "503" ]; then
+    echo "✅"
+    echo ""
+    echo "🎉 AniGlow 已启动"
+    echo "   前端   http://localhost:3000"
+    echo "   后端   http://localhost:8081/api"
+    echo "   健康   http://localhost:8081/api/actuator/health"
+    exit 0
+  fi
+  echo -n "."
+  sleep 2
+done
 
-echo "✅ Authing App ID: ${NUXT_PUBLIC_AUTHING_APP_ID:0:8}***"
-export HOST="${HOST:-0.0.0.0}"
-export PORT="${PORT:-3002}"
-
-if [ -z "${NUXT_PUBLIC_SITE_URL:-}" ] || [ "${NUXT_PUBLIC_SITE_URL}" = "http://localhost:3000" ]; then
-  export NUXT_PUBLIC_SITE_URL="http://www.mjj520.top"
-fi
-
-if [ -z "${NUXT_BACKEND_URL:-}" ] || [ "${NUXT_BACKEND_URL}" = "http://localhost:8081" ]; then
-  export NUXT_BACKEND_URL="http://127.0.0.1:8081"
-fi
-
-if [ -z "${NUXT_PUBLIC_BACKEND_URL:-}" ]; then
-  export NUXT_PUBLIC_BACKEND_URL="${NUXT_BACKEND_URL}"
-fi
-
-echo "🌐 监听地址: ${HOST}:${PORT}"
-echo "🔗 站点地址: ${NUXT_PUBLIC_SITE_URL}"
-echo "🚀 启动 Nitro 服务..."
-
-exec node .output/server/index.mjs
+echo ""
+echo "⚠️ 120 秒内未就绪，请检查: docker compose logs backend"
+exit 1
