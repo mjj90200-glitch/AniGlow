@@ -61,3 +61,6 @@ _pr_worktree/
 
 # Compose 本地覆盖（机器特定端口/IP钉定，勿提交）
 docker-compose.override.yml
+
+# 会话 Cookie（含令牌，绝不能提交）
+e2e_cookies.txt
