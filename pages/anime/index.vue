@@ -38,98 +38,20 @@
       </div>
     </section>
 
-    <!-- 综合筛选区（题材 / 地区 / 年份 / 格式） -->
-    <section class="mb-8 rounded-[2rem] border border-white/70 bg-white/60 backdrop-blur-xl p-4 sm:p-5 shadow-[0_18px_50px_rgba(31,68,47,0.08)]">
-      <div class="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <p class="text-xs font-bold tracking-[0.22em] uppercase text-firefly-600">Filter Garden</p>
-          <h2 class="text-lg font-extrabold text-gray-800 mt-1">筛选</h2>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="hidden sm:inline-flex items-center rounded-full bg-firefly-50 px-3 py-1 text-xs font-bold text-firefly-700">
-            {{ activeCategory.label }}
-          </span>
-          <button
-            v-if="hasActiveFilter"
-            type="button"
-            class="rounded-full border border-white/70 bg-white/60 px-3 py-1 text-xs font-bold
-                   text-gray-500 hover:text-firefly-600 hover:border-firefly/30 transition-colors"
-            @click="resetFilters"
-          >
-            重置筛选
-          </button>
-        </div>
-      </div>
-
-      <!-- 题材 -->
-      <div class="flex items-start gap-3 mb-3">
-        <span class="filter-row-label">题材</span>
-        <div class="flex flex-1 flex-wrap gap-2">
-          <button
-            v-for="category in categories"
-            :key="category.genre || 'all'"
-            type="button"
-            class="category-chip"
-            :class="{ 'category-chip-active': activeGenre === category.genre }"
-            @click="activeGenre = category.genre"
-          >
-            <span>{{ category.icon }}</span>
-            {{ category.label }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 地区 -->
-      <div class="flex items-start gap-3 mb-3">
-        <span class="filter-row-label">地区</span>
-        <div class="flex flex-1 flex-wrap gap-2">
-          <button
-            v-for="option in countryOptions"
-            :key="'c-' + (option.value || 'all')"
-            type="button"
-            class="filter-chip"
-            :class="{ 'category-chip-active': activeCountry === option.value }"
-            @click="activeCountry = option.value"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 格式 -->
-      <div class="flex items-start gap-3 mb-3">
-        <span class="filter-row-label">格式</span>
-        <div class="flex flex-1 flex-wrap gap-2">
-          <button
-            v-for="option in typeOptions"
-            :key="'t-' + (option.value || 'all')"
-            type="button"
-            class="filter-chip"
-            :class="{ 'category-chip-active': activeType === option.value }"
-            @click="activeType = option.value"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 年份 -->
-      <div class="flex items-start gap-3">
-        <span class="filter-row-label">年份</span>
-        <div class="flex flex-1 flex-wrap gap-2">
-          <button
-            v-for="option in yearChips"
-            :key="'y-' + option.label"
-            type="button"
-            class="filter-chip"
-            :class="{ 'category-chip-active': activeYearFrom === option.from && activeYearTo === option.to }"
-            @click="activeYearFrom = option.from; activeYearTo = option.to"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-    </section>
+    <AnimeFilterPanel
+      v-model:genre="activeGenre"
+      v-model:country="activeCountry"
+      v-model:type="activeType"
+      v-model:year-from="activeYearFrom"
+      v-model:year-to="activeYearTo"
+      :genres="ANIME_GENRE_OPTIONS"
+      :countries="countryOptions"
+      :types="typeOptions"
+      :years="yearChips"
+      :active-genre-label="activeCategory.label"
+      :has-active-filter="hasActiveFilter"
+      @reset="resetFilters"
+    />
 
     <!-- 搜索/筛选结果提示 -->
     <div
@@ -282,50 +204,16 @@
 
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, Search, Star, X } from 'lucide-vue-next'
-
-definePageMeta({ keepalive: true })
 import type { AnimeDto, AnimeListResponse } from '~/types/anime'
 import { mapGenres, tagClass, displayTitle, communityScore } from '~/composables/useAnimeI18n'
+import { ANIME_GENRE_OPTIONS, ANIME_TYPE_LABELS, ANIME_YEAR_RANGES } from '~/utils/anime-filters'
+
+definePageMeta({ keepalive: true })
 
 const { fetchFilterOptions, fetchFilteredAnime } = useAnime()
 const route = useRoute()
 
 const PAGE_SIZE = 60
-
-// ── 题材分类（AniList/MAL 通用题材名，确保筛选结果准确） ──
-const categories = [
-  { label: '全部', genre: '', icon: '✦' },
-  { label: '热血', genre: 'Action', icon: '⚡' },
-  { label: '冒险', genre: 'Adventure', icon: '✈' },
-  { label: '搞笑', genre: 'Comedy', icon: '☺' },
-  { label: '恋爱', genre: 'Romance', icon: '♡' },
-  { label: '奇幻', genre: 'Fantasy', icon: '✧' },
-  { label: '科幻', genre: 'Sci-Fi', icon: '⌁' },
-  { label: '日常', genre: 'Slice of Life', icon: '☁' },
-  { label: '校园', genre: 'School', icon: '♧' },
-  { label: '治愈', genre: 'Iyashikei', icon: '蛍' },
-  { label: '异世界', genre: 'Isekai', icon: '◇' },
-  { label: '音乐', genre: 'Music', icon: '♪' },
-  { label: '运动', genre: 'Sports', icon: '★' },
-  { label: '悬疑', genre: 'Mystery', icon: '?' },
-  { label: '心理', genre: 'Psychological', icon: '◈' },
-  { label: '超自然', genre: 'Supernatural', icon: '✜' },
-  { label: '恐怖', genre: 'Horror', icon: '☾' },
-  { label: '惊悚', genre: 'Thriller', icon: '⌖' },
-  { label: '剧情', genre: 'Drama', icon: '❖' },
-  { label: '机甲', genre: 'Mecha', icon: '⚙' },
-  { label: '魔法少女', genre: 'Mahou Shoujo', icon: '☆' },
-]
-
-// ── 格式标签映射 ──
-const TYPE_LABELS: Record<string, string> = {
-  TV: 'TV动画',
-  Movie: '剧场版',
-  ONA: 'ONA',
-  OVA: 'OVA',
-  Special: '特别篇',
-  Music: '音乐',
-}
 
 // ── 筛选状态（初始化自 URL，修改时同步回 URL，保证从详情页返回时恢复原状态） ──
 const activeGenre = ref(typeof route.query.genre === 'string' ? route.query.genre : '')
@@ -358,15 +246,6 @@ watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYearFrom, 
   router.replace({ query })
 })
 
-// ── 年份芯片：近年逐年份 + 更早按年代区间（与 B 站一致） ──
-const YEAR_RANGES: { label: string; from: number | null; to: number }[] = [
-  { label: '2014-2010', from: 2010, to: 2014 },
-  { label: '2009-2005', from: 2005, to: 2009 },
-  { label: '2004-2000', from: 2000, to: 2004 },
-  { label: '90年代', from: 1990, to: 1999 },
-  { label: '80年代', from: 1980, to: 1989 },
-  { label: '更早', from: null, to: 1979 },
-]
 
 watch(() => route.query.q, (query) => {
   searchInput.value = typeof query === 'string' ? query : ''
@@ -416,7 +295,7 @@ const typeOptions = computed(() => {
   const all = filterOptions.value?.types ?? []
   return [
     { label: '全部', value: '' },
-    ...all.map(t => ({ label: TYPE_LABELS[t] ?? t, value: t })),
+    ...all.map(t => ({ label: ANIME_TYPE_LABELS[t] ?? t, value: t })),
   ]
 })
 
@@ -424,8 +303,8 @@ const yearChips = computed(() => {
   const allYears = filterOptions.value?.years ?? []
   const individual = allYears.filter(y => y >= 2015).sort((a, b) => b - a)
     .map(y => ({ label: `${y}`, from: y as number | null, to: y as number | null }))
-  const ranges = YEAR_RANGES
-    .filter(r => allYears.some(y => (r.from === null || y >= r.from) && y <= r.to))
+  const ranges = ANIME_YEAR_RANGES
+    .filter(r => allYears.some(y => (r.from === null || y >= r.from) && y <= (r.to ?? Number.NEGATIVE_INFINITY)))
     .map(r => ({ label: r.label, from: r.from as number | null, to: r.to as number | null }))
   return [{ label: '全部年份', from: null, to: null }, ...individual, ...ranges]
 })
@@ -492,7 +371,7 @@ watch([debouncedSearch, activeGenre, activeType, activeCountry, activeYearFrom, 
 })
 
 const activeCategory = computed(() => {
-  return categories.find(c => c.genre === activeGenre.value) ?? categories[0]
+  return ANIME_GENRE_OPTIONS.find(c => c.genre === activeGenre.value) ?? ANIME_GENRE_OPTIONS[0]
 })
 
 const animeCards = computed(() => {
@@ -522,72 +401,6 @@ onBeforeRouteLeave(() => {
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.filter-row-label {
-  flex: 0 0 3rem;
-  padding-top: 0.55rem;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #8a95a1;
-}
-
-.category-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.62);
-  padding: 0.62rem 0.95rem;
-  color: #596473;
-  font-size: 0.85rem;
-  font-weight: 800;
-  box-shadow: 0 10px 28px rgba(31, 68, 47, 0.06);
-  transition: all 0.24s ease;
-}
-
-.category-chip:hover {
-  color: #07873f;
-  transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(0, 170, 68, 0.13);
-}
-
-.category-chip-active {
-  border-color: rgba(0, 230, 118, 0.45);
-  background: linear-gradient(135deg, rgba(0, 230, 118, 0.92), rgba(134, 239, 172, 0.82));
-  color: #ffffff;
-  box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
-}
-
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.62);
-  padding: 0.55rem 0.9rem;
-  color: #596473;
-  font-size: 0.82rem;
-  font-weight: 700;
-  box-shadow: 0 10px 28px rgba(31, 68, 47, 0.05);
-  transition: all 0.24s ease;
-}
-
-.filter-chip:hover {
-  color: #07873f;
-  transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(0, 170, 68, 0.12);
-}
-
-/* 双类名提升优先级：激活的绿色必须压过 .filter-chip 的白底（后者源码顺序在后） */
-.filter-chip.category-chip-active {
-  border-color: rgba(0, 230, 118, 0.45);
-  background: linear-gradient(135deg, rgba(0, 230, 118, 0.92), rgba(134, 239, 172, 0.82));
-  color: #ffffff;
-  box-shadow: 0 16px 38px rgba(0, 230, 118, 0.26);
 }
 
 /* ── 分页按钮 ───────────────────────────────────── */
