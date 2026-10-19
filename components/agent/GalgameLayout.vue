@@ -38,6 +38,7 @@
 
             <!-- Membership -->
             <button
+              v-if="monetizationEnabled"
               class="rail-pass"
               type="button"
               @click="openDonatePopup()"
@@ -112,14 +113,14 @@
         <!-- Background gradient -->
         <div class="galgame-bg-layer" />
 
-        <button class="quota-badge-desktop" type="button" @click="openDonatePopup()">
+        <div class="quota-badge-desktop" aria-label="本小时剩余对话次数">
           <span class="quota-badge-top">
             <Gauge class="h-3.5 w-3.5" />
             本小时剩余 <strong>{{ quotaStatus.remaining }}</strong> / {{ quotaStatus.limit }} 次
           </span>
           <span class="quota-badge-track"><span :style="{ width: `${quotaPercent}%` }" /></span>
           <small>{{ quotaResetLabel }}</small>
-        </button>
+        </div>
 
         <!-- Character portrait -->
         <Transition name="sprite-crossfade" mode="out-in">
@@ -175,6 +176,7 @@
 <script setup lang="ts">
 import { Crown, Gauge, Search, Send, X } from 'lucide-vue-next'
 const props = defineProps<{ chat: Record<string, any> }>()
+const monetizationEnabled = false
 const {
   selectedRole, hasImage, roleNames, roleEmojis, emotionLabel, showMobileSearch,
   membershipStatus, openDonatePopup, searchInputRef, searchText, filteredSearchResults,

@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed bottom-6 right-6 z-[70] flex flex-col items-end gap-3">
+  <div v-if="monetizationEnabled" class="fixed bottom-6 right-6 z-[70] flex flex-col items-end gap-3">
     <Transition name="donate-popup">
       <div
         v-if="showPopup"
@@ -57,6 +57,7 @@ interface MembershipStatus {
 }
 
 const showPopup = ref(false)
+const monetizationEnabled = false
 const qrUrl = ref('/images/douyin-qr.png')
 const title = ref('喜欢角色的陪伴吗？')
 

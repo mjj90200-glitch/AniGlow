@@ -2,7 +2,7 @@
     <Teleport to="body">
       <Transition name="donate-popup">
         <div
-          v-if="showDonatePopup"
+          v-if="monetizationEnabled && showDonatePopup"
           class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/20 px-4 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
@@ -35,5 +35,6 @@
 <script setup lang="ts">
 import { Crown, X } from 'lucide-vue-next'
 const props = defineProps<{ chat: Record<string, any> }>()
+const monetizationEnabled = false
 const { showDonatePopup, donateTitle, quotaStatus, quotaResetLabel, douyinQrUrl } = toRefs(props.chat)
 </script>

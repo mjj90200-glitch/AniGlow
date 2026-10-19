@@ -24,20 +24,20 @@
             <Search v-if="!showMobileSearch" class="w-4 h-4" />
             <X v-else class="w-4 h-4" />
           </button>
-          <button class="chat-topbar-btn" @click="openDonatePopup()">
+          <button v-if="monetizationEnabled" class="chat-topbar-btn" @click="openDonatePopup()">
             <Crown class="w-4 h-4" :class="membershipStatus?.active ? 'text-firefly' : 'text-gray-400'" />
           </button>
         </div>
       </div>
 
-      <button class="quota-strip-mobile" type="button" @click="openDonatePopup()">
+      <div class="quota-strip-mobile" aria-label="本小时剩余对话次数">
         <span class="quota-strip-copy">
           <span class="quota-strip-label">本小时对话</span>
           <strong>{{ quotaStatus.remaining }} / {{ quotaStatus.limit }}</strong>
         </span>
         <span class="quota-strip-track"><span :style="{ width: `${quotaPercent}%` }" /></span>
         <span class="quota-strip-reset">{{ quotaResetLabel }}</span>
-      </button>
+      </div>
 
       <!-- 搜索栏 -->
       <div v-if="showMobileSearch" class="chat-search-bar">
@@ -170,6 +170,7 @@
 <script setup lang="ts">
 import { ChevronDown, Crown, Search, Send, X } from 'lucide-vue-next'
 const props = defineProps<{ chat: Record<string, any> }>()
+const monetizationEnabled = false
 const {
   selectedRole, hasImage, roleNames, roleEmojis, currentCharacterSource, emotionLabel,
   showMobileRoles, showMobileSearch, openDonatePopup, quotaStatus, quotaPercent, quotaResetLabel,

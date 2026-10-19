@@ -607,7 +607,7 @@
     </footer>
 
     <!-- 全站赏按钮 -->
-    <div class="donate-fab-global">
+    <div v-if="monetizationEnabled" class="donate-fab-global">
       <button class="donate-fab-btn" @click="showGlobalDonate = !showGlobalDonate" aria-label="打赏支持">
         <span class="donate-fab-btn-text">賞</span>
       </button>
@@ -670,6 +670,7 @@ const userMenuOpen = ref(false)
 const showProfileModal = ref(false)
 const showGlobalDonate = ref(false)
 const globalQrUrl = ref('/images/douyin-qr.png')
+const monetizationEnabled = false
 const showGlobalSearch = ref(false)
 const globalSearchQuery = ref('')
 const globalSearchInputRef = ref<HTMLInputElement | null>(null)
