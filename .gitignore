@@ -64,3 +64,10 @@ docker-compose.override.yml
 
 # 会话 Cookie（含令牌，绝不能提交）
 e2e_cookies.txt
+
+# Android App local/build artifacts
+aniglow-android/.gradle/
+aniglow-android/**/build/
+aniglow-android/local.properties
+aniglow-android/.idea/
+aniglow-android/captures/

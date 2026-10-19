@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 仅开发版允许访问本机的 HTTP 后端；正式版仍要求 HTTPS。 -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>
